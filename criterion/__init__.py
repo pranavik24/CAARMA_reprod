@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .softmax import softmax
-from .amsoftmax import amsoftmax
+from .amsoftmax_mix_gan import amsoftmax_gan
 
+__all__ = ["amsoftmax_gan"]

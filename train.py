@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 from copy import deepcopy
+import os
+from pathlib import Path
 from typing import Any, Union
 import torch.distributed as dist
 #from pytorch_lightning.plugins import DDPPlugin
@@ -21,8 +23,7 @@ from feature.build_feature import build_feature
 from functions.loader import super_dataset
 from criterion.build_criterion import build_criterion
 from model.model_build import build_model
-from model.discriminator_mix import MixupDiscriminator
-from helper.mixup_avg import mixup_data_euc_avg
+from model.discriminator_mix import Discriminator2
 
 from scipy.interpolate import interp1d
 from sklearn.metrics import roc_curve
@@ -48,7 +49,7 @@ class Task(LightningModule):
         self.automatic_optimization = False
         
         embedding_dim = self.config['embedding_dim']
-        self.discriminator = MixupDiscriminator(cache_dir="./cache_dir/").train()
+        self.discriminator = Discriminator2(emb_dim=embedding_dim).train()
         self.BCE_loss = nn.BCEWithLogitsLoss().to(self.device) 
         
         # Add hyperparameters for GAN training
@@ -66,10 +67,14 @@ class Task(LightningModule):
         feature = self.features(x)
         embedding = self.model(feature)
         return embedding
+
+    def set_discriminator_requires_grad(self, requires_grad):
+        for parameter in self.discriminator.parameters():
+            parameter.requires_grad_(requires_grad)
+
     def adjust_weight(self,amsoftmax_loss,g_loss):
         # Dynamic adjustment after warmup
-        if self.current_epoch > self.pretrain_eps:
-            loss_ratio = amsoftmax_loss / (g_loss + 1e-8)
+        loss_ratio = (amsoftmax_loss.detach() / (g_loss.detach() + 1e-8)).item()
         if loss_ratio > 1.5:
             self.lambda_adv = min(self.lambda_adv * 1.1, 0.01)
         elif loss_ratio < 0.5:
@@ -114,6 +119,7 @@ class Task(LightningModule):
             if self.g_step_counter < 5:
                 self.lambda_adv = 0.0005
                 optimizer_main.zero_grad()
+                self.set_discriminator_requires_grad(False)
                 real_preds = self.discriminator(self.normalize(embedding.detach()))
                 fake_preds = self.discriminator(self.normalize(synthetic_embeddings))
                 fake_labels = torch.zeros(real_preds.size()).to(self.device) 
@@ -140,14 +146,16 @@ class Task(LightningModule):
                         pg['lr'] = lr_scale * self.learning_rate
                 print("gloss")
                 self.g_step_counter += 1
+                self.set_discriminator_requires_grad(True)
                 return total_loss
             
             elif self.d_step_counter < 1:  
                 # Train Discriminator
+                self.set_discriminator_requires_grad(True)
                 d_optimizer.zero_grad()
                 # Real samples
                 real_preds = self.discriminator(self.normalize(embedding.detach()))
-                fake_preds = self.discriminator(self.normalize(synthetic_embeddings))
+                fake_preds = self.discriminator(self.normalize(synthetic_embeddings.detach()))
                 real_labels = torch.ones(real_preds.size()).to(self.device) 
                 d_real_loss = self.BCE_loss(real_preds, real_labels)
                 
@@ -169,10 +177,11 @@ class Task(LightningModule):
             if self.d_step_counter < 1:  
 
                 # Train Discriminator
+                self.set_discriminator_requires_grad(True)
                 d_optimizer.zero_grad()                
                 # Real samples
                 real_preds = self.discriminator(self.normalize(embedding.detach()))
-                fake_preds = self.discriminator(self.normalize(synthetic_embeddings))
+                fake_preds = self.discriminator(self.normalize(synthetic_embeddings.detach()))
                 real_labels = torch.ones(real_preds.size()).to(self.device) 
                 d_real_loss = self.BCE_loss(real_preds, real_labels)
                 
@@ -193,6 +202,7 @@ class Task(LightningModule):
             elif self.d_step_counter >= 1 and self.g_step_counter < 1:  # Train the generator for 1 step
                 # Train Generator (Main Model) first
                 optimizer_main.zero_grad()
+                self.set_discriminator_requires_grad(False)
                 self.lambda_adv = 0.25  # Weight for adversarial loss
                 real_preds = self.discriminator(self.normalize(embedding.detach()))
                 fake_preds = self.discriminator(self.normalize(synthetic_embeddings))
@@ -220,6 +230,7 @@ class Task(LightningModule):
                         pg['lr'] = lr_scale * self.learning_rate
                 print("gloss")
                 self.g_step_counter += 1
+                self.set_discriminator_requires_grad(True)
 
                 return total_loss
                 
@@ -277,20 +288,21 @@ class Task(LightningModule):
         self.eval_vectors.append(x)
         self.index_mapping[path[0]] = batch_idx
         
-    def test_epoch_end(self, outputs):
-        return self.validation_epoch_end(outputs)
+    def on_test_epoch_end(self):
+        return self.on_validation_epoch_end()
     
     def similarity_score(self, trials, index_mapping, eval_vectors):
         labels = []
         scores = []
         epsilon = 1e-8  # Small value to prevent division by zero
         for item in trials:
-            enroll_vector = eval_vectors[index_mapping[self.config['root'] + item[1]]]
-            test_vector = eval_vectors[index_mapping[self.config['root'] + item[2]]]
-            with torch.cuda.amp.autocast():
-                score = enroll_vector.dot(test_vector.T)
-                denom = np.linalg.norm(enroll_vector) * np.linalg.norm(test_vector)
-                score = score/ (denom + epsilon)
+            enroll_path = os.path.join(self.config['root'], item[1])
+            test_path = os.path.join(self.config['root'], item[2])
+            enroll_vector = eval_vectors[index_mapping[enroll_path]]
+            test_vector = eval_vectors[index_mapping[test_path]]
+            score = enroll_vector.dot(test_vector.T)
+            denom = np.linalg.norm(enroll_vector) * np.linalg.norm(test_vector)
+            score = score/ (denom + epsilon)
             if np.isnan(score):
                 print("Warning: NaN detected in score calculation. Setting score to 0.")
                 score = 0.0
@@ -330,20 +342,32 @@ class Task(LightningModule):
         c_def = min(c_miss * p_target, c_fa * (1 - p_target))
         min_dcf = min_c_det / c_def
         return min_dcf, min_c_det_threshold
+
+    def gather_eval_outputs(self):
+        if dist.is_available() and dist.is_initialized():
+            world_size = dist.get_world_size()
+            gathered_vectors = [None for _ in range(world_size)]
+            gathered_maps = [None for _ in range(world_size)]
+            dist.all_gather_object(gathered_vectors, self.eval_vectors)
+            dist.all_gather_object(gathered_maps, self.index_mapping)
+
+            eval_vectors = []
+            index_mapping = {}
+            offset = 0
+            for vectors, mapping in zip(gathered_vectors, gathered_maps):
+                vectors = vectors or []
+                mapping = mapping or {}
+                eval_vectors.extend(vectors)
+                for path, local_index in mapping.items():
+                    index_mapping[path] = offset + local_index
+                offset += len(vectors)
+            return eval_vectors, index_mapping
+
+        return self.eval_vectors, self.index_mapping
     
     def on_validation_epoch_end(self):
-        num_gpus = torch.cuda.device_count()
-        eval_vectors = [None for _ in range(num_gpus)]
-        dist.all_gather_object(eval_vectors, self.eval_vectors)
+        eval_vectors, index_mapping = self.gather_eval_outputs()
         eval_vectors = np.vstack(eval_vectors)
-
-        table = [None for _ in range(num_gpus)]
-        dist.all_gather_object(table, self.index_mapping)
-
-        index_mapping = {}
-        for i in table:
-            index_mapping.update(i)
-
         eval_vectors = eval_vectors - np.mean(eval_vectors, axis=0)
         labels, scores = self.similarity_score(self.trials, index_mapping, eval_vectors)
         EER, threshold = self.compute_eer(labels, scores)
@@ -365,13 +389,48 @@ class Task(LightningModule):
         self.log("cosine_minDCF(10-3)", minDCF)
 
 def cli_main():
+    def none_like(value):
+        return value is None or str(value).strip().lower() in {"", "none", "null"}
+
+    def as_bool(value):
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
     def load_config(config_file_path):
         """Load the configuration from the file."""
         with open(config_file_path) as file:
             config = yaml.safe_load(file)
         return config
 
-    config = load_config("/ocean/projects/cis220031p/mbaali/mixup/mixup_framework/config/config.yaml")
+    def resolve_path(value, base_dir):
+        if none_like(value):
+            return None
+        path = Path(str(value)).expanduser()
+        if not path.is_absolute():
+            path = base_dir / path
+        return str(path)
+
+    parser = ArgumentParser(description="Train CAARMA regular mixup")
+    parser.add_argument("--config", default="config.yaml", help="Path to config YAML")
+    parser.add_argument("--checkpoint-path", default=None, help="Optional checkpoint override")
+    args = parser.parse_args()
+
+    config_path = Path(args.config).expanduser().resolve()
+    config = load_config(config_path)
+    config_dir = config_path.parent
+
+    for key in ("dataset", "trial_path", "root", "save_dir"):
+        if key in config:
+            config[key] = resolve_path(config[key], config_dir)
+
+    if args.checkpoint_path is not None:
+        config["checkpoint_path"] = args.checkpoint_path
+    if none_like(config.get("checkpoint_path")):
+        config["checkpoint_path"] = None
+    else:
+        config["checkpoint_path"] = resolve_path(config["checkpoint_path"], config_dir)
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Device: ", device)
     
@@ -385,7 +444,7 @@ def cli_main():
 
     final_project = Task(features, model, criterion, config, learning_rate = config['init_lr'], weight_decay=config['weight_decay'], batch_size = config['batch_size'], num_workers = config['num_workers'], max_epochs = config['epochs'], trial_path= config['trial_path'], warmup_step = config['warmup_step'])
     
-    if config['checkpoint_path'] != 'None':
+    if config.get('checkpoint_path'):
         state_dict = torch.load(config['checkpoint_path'], map_location="cpu")["state_dict"]
         # print(state_dict.keys())
         # model_state_dict = model.state_dict()
@@ -396,26 +455,40 @@ def cli_main():
     assert config['save_dir'] is not None
     checkpoint_callback = ModelCheckpoint(monitor='cosine_eer', save_top_k=100,
             filename="{epoch}_{cosine_eer:.2f}", dirpath=config['save_dir'])
-    lr_monitor = LearningRateMonitor(logging_interval='step')
-    wandb_logger = WandbLogger(
-        project='mixup',     # Change this to your W&B project name
-        name='weight_decay_100BS_alternate_syn',          # Change this to your desired experiment name
-        save_dir=config['save_dir']
-    )
-    wandb_logger.experiment.config.update(config)
+    callbacks = [checkpoint_callback]
 
-    AVAIL_GPUS = torch.cuda.device_count()
+    logger = False
+    if as_bool(config.get('USE_WANDB', False)):
+        try:
+            logger = WandbLogger(
+                project=config.get('wandb_project', 'mixup'),
+                name=config.get('title', 'regular_mixup'),
+                save_dir=config['save_dir']
+            )
+            logger.experiment.config.update(config)
+            callbacks.append(LearningRateMonitor(logging_interval='step'))
+        except ModuleNotFoundError as exc:
+            if "wandb" not in str(exc).lower():
+                raise
+            print("USE_WANDB is True, but wandb is not installed. Continuing without W&B logging.")
+
+    accelerator = "gpu" if torch.cuda.is_available() else "cpu"
+    devices = -1 if accelerator == "gpu" else 1
+    strategy = "auto"
+    if accelerator == "gpu" and torch.cuda.device_count() > 1:
+        strategy = DDPStrategy(find_unused_parameters=True, gradient_as_bucket_view=True)
+
     trainer = Trainer(
-        strategy=DDPStrategy(find_unused_parameters=True, gradient_as_bucket_view=True),
+        strategy=strategy,
         # plugins=DDPPlugin(find_unused_parameters=False),
-        accelerator="gpu",
-        devices=-1,  # Use all available GPUs
+        accelerator=accelerator,
+        devices=devices,  # Use all available GPUs when available
         max_epochs=config['epochs'],
-        logger=wandb_logger, 
+        logger=logger,
         num_sanity_val_steps=0,  # Adjust for faster debugging
-        sync_batchnorm=True,
-        precision=16,  # Enable mixed precision training
-        callbacks=[checkpoint_callback, lr_monitor],
+        sync_batchnorm=accelerator == "gpu" and torch.cuda.device_count() > 1,
+        precision="16-mixed" if accelerator == "gpu" else 32,
+        callbacks=callbacks,
         #     EarlyStopping(
         #     monitor='cosine_eer',
         #     patience=10,
@@ -433,22 +506,7 @@ def cli_main():
         profiler="simple",
 
     )
-    #trainer.fit(final_project, datamodule=dataloader)
-
-    # if config.get('checkpoint_path'):
-    #     trainer.fit(
-    #         final_project, 
-    #         datamodule=dataloader, 
-    #         ckpt_path=config['checkpoint_path']
-    #     )
-    # else:
-
-    #     trainer.fit(final_project, datamodule=dataloader)
-    
-    #trainer.fit(final_project, datamodule=dataloader)
-    #print("\n--- Running Immediate Validation ---")
-    trainer.validate(final_project, datamodule=dataloader, ckpt_path=config['checkpoint_path'])
+    trainer.fit(final_project, datamodule=dataloader)
 
 if __name__ == "__main__":
     cli_main()
-    

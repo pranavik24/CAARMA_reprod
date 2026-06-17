@@ -823,16 +823,6 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
     devices = -1 if accelerator == "gpu" else 1
     precision = 16 if accelerator == "gpu" else 32
 
-    callbacks = []
-    if mode == "train":
-        checkpoint_callback = ModelCheckpoint(
-            monitor="cosine_eer",
-            save_top_k=100,
-            filename="{epoch}_{cosine_eer:.2f}",
-            dirpath=config["save_dir"],
-        )
-        callbacks = [checkpoint_callback, LearningRateMonitor(logging_interval="step")]
-
     logger = False
     if mode == "train" and _as_bool(config.get("USE_WANDB", False)):
         from pytorch_lightning.loggers import WandbLogger
@@ -843,6 +833,19 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
             save_dir=config["save_dir"],
         )
         logger.experiment.config.update(config)
+
+    callbacks = []
+    if mode == "train":
+        callbacks.append(
+            ModelCheckpoint(
+                monitor="cosine_eer",
+                save_top_k=100,
+                filename="{epoch}_{cosine_eer:.2f}",
+                dirpath=config["save_dir"],
+            )
+        )
+        if logger:
+            callbacks.append(LearningRateMonitor(logging_interval="step"))
 
     strategy = "auto"
     if accelerator == "gpu" and torch.cuda.device_count() > 1:

@@ -9,6 +9,7 @@ from scipy import signal
 from scipy.io import wavfile
 from sklearn.utils import shuffle
 from torch.utils.data import DataLoader, Dataset
+from torch.nn.utils.rnn import pad_sequence
 import soundfile as sf
 
 import torchaudio
@@ -97,11 +98,11 @@ class Evaluation_Dataset(Dataset):
         return len(self.paths)
 
     def __getitem__(self, idx):
-        
-        waveform  = load_audio(self.root + self.paths[idx], -1)
+        path = os.path.join(self.root, self.paths[idx])
+        waveform  = load_audio(path, -1)
         sample = {
             'waveform': torch.FloatTensor(waveform),
-            'path': os.path.join(self.root, self.paths[idx]),
+            'path': path,
             'lens': waveform.shape  # Add the waveform length to the sample
         }
         
@@ -113,7 +114,7 @@ class Evaluation_Dataset(Dataset):
         waveform_lengths = torch.tensor(waveform_lengths)
         audio_paths = [item['path'] for item in batch]
 
-        audios_padded = torch.Floattensor(audios)
+        audios_padded = pad_sequence(audios, batch_first=True, padding_value=0.0)
 
         return {
             "waveform": audios_padded,

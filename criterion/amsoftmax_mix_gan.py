@@ -18,8 +18,6 @@ class amsoftmax_gan(nn.Module):
         self.W = torch.nn.Parameter(torch.randn(embedding_dim, num_classes), requires_grad=True)
         self.ce = nn.CrossEntropyLoss()
         nn.init.xavier_normal_(self.W, gain=1)
-        size = self.W.shape[1]  # The size of the diagonal matrix
-        self.I = torch.diag(torch.ones(size)).to('cuda:0')
 
         print('Initialised AM-Softmax m=%.3f s=%.3f'%(self.m, self.s))
         print('Embedding dim is {}, number of speakers is {}'.format(embedding_dim, num_classes))
@@ -43,8 +41,9 @@ class amsoftmax_gan(nn.Module):
             costh = torch.mm(x_norm, w_norm)
             label_view = y_combined_0.view(-1,1) #label.view(-1, 1)
             if label_view.is_cuda: label_view = label_view.cpu()
-            delt_costh = torch.zeros(costh.size()).scatter_(1, label_view, self.m)
-            if x.is_cuda: delt_costh = delt_costh.cuda()
+            delt_costh = torch.zeros(
+                costh.size(), device=costh.device, dtype=costh.dtype
+            ).scatter_(1, label_view.to(costh.device), self.m)
             costh_m = costh - delt_costh
             costh_m_s = self.s * costh_m
             
@@ -62,8 +61,9 @@ class amsoftmax_gan(nn.Module):
             costh = torch.mm(x_norm, w_norm)
             label_view =  label.view(-1, 1)
             if label_view.is_cuda: label_view = label_view.cpu()
-            delt_costh = torch.zeros(costh.size()).scatter_(1, label_view, self.m)
-            if x.is_cuda: delt_costh = delt_costh.cuda()
+            delt_costh = torch.zeros(
+                costh.size(), device=costh.device, dtype=costh.dtype
+            ).scatter_(1, label_view.to(costh.device), self.m)
             costh_m = costh - delt_costh
             costh_m_s = self.s * costh_m
             

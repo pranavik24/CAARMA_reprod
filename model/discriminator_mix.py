@@ -1,9 +1,12 @@
 import torch
 import torch.nn as nn
-import torch.nn.utils.spectral_norm as spectral_norm
+from torch.nn.utils import spectral_norm
 import torch.nn.functional as F
-from transformers import HubertModel, HubertConfig, Wav2Vec2Model
-from functions.attn_pooling import AttentivePooling
+
+try:
+    from transformers import HubertModel
+except ImportError:
+    HubertModel = None
 
 class Adapter(nn.Module):
     def __init__(self, input_dim, hidden_dim):
@@ -115,9 +118,81 @@ class EnhancedResidualBlock(nn.Module):
         return F.gelu(out + identity)
 
 
+class MinibatchStdDev(nn.Module):
+    """
+    Adds one feature containing the average feature-wise std across the batch.
+    Helps discriminator detect distribution-level differences.
+    """
+    def forward(self, x):
+        if x.size(0) <= 1:
+            std_feat = torch.zeros(x.size(0), 1, device=x.device, dtype=x.dtype)
+        else:
+            std = x.float().std(dim=0, unbiased=False).mean()
+            std_feat = std.expand(x.size(0), 1).to(dtype=x.dtype)
+
+        return torch.cat([x, std_feat], dim=1)
+
+
+class ResidualMLPBlock(nn.Module):
+    def __init__(self, in_dim, out_dim, dropout_rate=0.1):
+        super().__init__()
+
+        self.main = nn.Sequential(
+            spectral_norm(nn.Linear(in_dim, out_dim)),
+            nn.LayerNorm(out_dim),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(dropout_rate),
+            spectral_norm(nn.Linear(out_dim, out_dim)),
+            nn.LayerNorm(out_dim),
+        )
+
+        self.skip = (
+            spectral_norm(nn.Linear(in_dim, out_dim))
+            if in_dim != out_dim
+            else nn.Identity()
+        )
+
+        self.act = nn.LeakyReLU(0.2)
+
+    def forward(self, x):
+        return self.act(self.main(x) + self.skip(x))
+
+
+class Discriminator2(nn.Module):
+    def __init__(
+        self,
+        emb_dim=192,
+        hidden_dim=384,
+        mid_dim=256,
+        dropout_rate=0.1,
+        hubert_model_name=None,
+        cache_dir=None,
+        proj_dim=None,
+    ):
+        super().__init__()
+
+        self.discriminator = nn.Sequential(
+            ResidualMLPBlock(emb_dim, hidden_dim, dropout_rate),
+            ResidualMLPBlock(hidden_dim, hidden_dim, dropout_rate),
+            ResidualMLPBlock(hidden_dim, mid_dim, dropout_rate),
+            MinibatchStdDev(),
+            spectral_norm(nn.Linear(mid_dim + 1, 128)),
+            nn.LayerNorm(128),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(dropout_rate),
+            spectral_norm(nn.Linear(128, 1)),
+        )
+
+    def forward(self, x):
+        x = F.normalize(x, p=2, dim=-1)
+        return self.discriminator(x)
+
+
 class MixupDiscriminator(nn.Module):
     def __init__(self, hubert_model_name="facebook/hubert-large-ls960-ft", cache_dir="", proj_dim=256, emb_dim=192):
         super(MixupDiscriminator, self).__init__()
+        if HubertModel is None:
+            raise ImportError("transformers is required to use MixupDiscriminator")
         self.hubert = HubertModel.from_pretrained(hubert_model_name, cache_dir=cache_dir)
         
         # For speaker recognition, layers 7-12 are most informative for speaker characteristics
@@ -187,6 +262,8 @@ class MixupDiscriminator(nn.Module):
 class HubertDiscriminator(nn.Module):
     def __init__(self, hubert_model_name="facebook/hubert-large-ls960-ft",cache_dir="", proj_dim=128, emb_dim = 192):
         super(HubertDiscriminator, self).__init__()
+        if HubertModel is None:
+            raise ImportError("transformers is required to use HubertDiscriminator")
         # Load pre-trained HuBERT
         self.hubert = HubertModel.from_pretrained(hubert_model_name, cache_dir=cache_dir)
         # for param in self.hubert.parameters():

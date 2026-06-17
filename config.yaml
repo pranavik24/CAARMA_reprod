@@ -14,7 +14,7 @@ init_lr: 0.001
 epochs: 30 
 weight_decay: 0.0000001 
 trial_path: "./data/vox1_test.txt"
-root: "./wav/"
+root: "./voxceleb1_test/wav/"
 warmup_step: 2000
 batch_size: 200
 num_workers: 40

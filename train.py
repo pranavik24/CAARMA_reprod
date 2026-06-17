@@ -106,12 +106,10 @@ class Task(LightningModule):
         if self.d_step_counter >= 1 and self.g_step_counter >= 5:
                 self.d_step_counter = 0
                 self.g_step_counter = 0
-                print("set 0 pre-training")
         
         elif self.d_step_counter >= 1 and self.g_step_counter >= 1 and self.current_epoch > self.pretrain_eps:
                 self.d_step_counter = 0
                 self.g_step_counter = 0
-                print("set 0 discriminator")
 
 
         if self.current_epoch <= self.pretrain_eps:
@@ -137,14 +135,13 @@ class Task(LightningModule):
                 self.log('am_loss', amsoftmax_loss, prog_bar=True)
                 self.log('am_loss_syn', amsoftmax_syn_loss, prog_bar=True)
                 self.log('acc', acc, prog_bar=True)
-                self.log('g_loss', g_loss, prog_bar=True)
+                self.log('g_loss', g_loss)
                 self.log('total_loss', total_loss, prog_bar=True)
                 optimizer_main.step()
                 if self.trainer.global_step < self.config['warmup_step']:
                     lr_scale = min(1., float(self.trainer.global_step + 1) / float(self.config['warmup_step']))
                     for pg in optimizer_main.param_groups:
                         pg['lr'] = lr_scale * self.learning_rate
-                print("gloss")
                 self.g_step_counter += 1
                 self.set_discriminator_requires_grad(True)
                 return total_loss
@@ -167,10 +164,9 @@ class Task(LightningModule):
                 d_loss = (d_real_loss + d_fake_loss) / 2
 
                 self.manual_backward(d_loss)
-                self.log('d_loss', d_loss, prog_bar=True)
+                self.log('d_loss', d_loss)
                 d_optimizer.step()
                 self.d_step_counter += 1
-                print("d_loss")
                 return d_loss
         
         else:
@@ -193,10 +189,9 @@ class Task(LightningModule):
                 d_loss = (d_real_loss + d_fake_loss) / 2
                     
                 self.manual_backward(d_loss)
-                self.log('d_loss', d_loss, prog_bar=True)
+                self.log('d_loss', d_loss)
                 d_optimizer.step()
                 self.d_step_counter += 1
-                print("d_loss")
                 return d_loss
 
             elif self.d_step_counter >= 1 and self.g_step_counter < 1:  # Train the generator for 1 step
@@ -221,14 +216,13 @@ class Task(LightningModule):
                 self.log('am_loss', amsoftmax_loss, prog_bar=True)
                 self.log('am_loss_syn', amsoftmax_syn_loss, prog_bar=True)
                 self.log('acc', acc, prog_bar=True)
-                self.log('g_loss', g_loss, prog_bar=True)
+                self.log('g_loss', g_loss)
                 self.log('total_loss', total_loss, prog_bar=True)
                 optimizer_main.step()
                 if self.trainer.global_step < self.config['warmup_step']:
                     lr_scale = min(1., float(self.trainer.global_step + 1) / float(self.config['warmup_step']))
                     for pg in optimizer_main.param_groups:
                         pg['lr'] = lr_scale * self.learning_rate
-                print("gloss")
                 self.g_step_counter += 1
                 self.set_discriminator_requires_grad(True)
 
@@ -411,10 +405,41 @@ def cli_main():
             path = base_dir / path
         return str(path)
 
+    def first_trial_audio_path(trial_path, root):
+        trials = np.loadtxt(trial_path, str)
+        if trials.ndim == 1:
+            trials = trials.reshape(1, -1)
+        return os.path.join(root, trials[0][1])
+
+    def resolve_eval_root(config, config_dir):
+        configured_root = config["root"]
+        if os.path.exists(first_trial_audio_path(config["trial_path"], configured_root)):
+            return configured_root
+
+        candidates = [
+            config_dir / "voxceleb1_test" / "wav",
+            config_dir / "data" / "voxceleb1_test" / "wav",
+            Path("/content/voxceleb1_test/wav"),
+            Path("/content/data/voxceleb1_test/wav"),
+        ]
+        for candidate in candidates:
+            candidate_root = str(candidate)
+            if os.path.exists(first_trial_audio_path(config["trial_path"], candidate_root)):
+                print(f"Using detected validation root: {candidate_root}")
+                return candidate_root
+
+        missing_path = first_trial_audio_path(config["trial_path"], configured_root)
+        raise FileNotFoundError(
+            f"Validation audio not found: {missing_path}. "
+            "The trial file is correct, but root must point to the VoxCeleb1 test wav directory. "
+            "Pass --root /content/voxceleb1_test/wav or update root in config.yaml."
+        )
+
     parser = ArgumentParser(description="Train CAARMA regular mixup")
     parser.add_argument("--config", default="config.yaml", help="Path to config YAML")
     parser.add_argument("--checkpoint-path", default=None, help="Optional checkpoint override")
     parser.add_argument("--trial-path", default=None, help="Optional trial file override")
+    parser.add_argument("--root", default=None, help="Optional VoxCeleb1 test wav root override")
     args = parser.parse_args()
 
     config_path = Path(args.config).expanduser().resolve()
@@ -428,6 +453,9 @@ def cli_main():
     if args.trial_path is not None:
         config["trial_path"] = resolve_path(args.trial_path, config_dir)
 
+    if args.root is not None:
+        config["root"] = resolve_path(args.root, config_dir)
+
     if args.checkpoint_path is not None:
         config["checkpoint_path"] = args.checkpoint_path
     if none_like(config.get("checkpoint_path")):
@@ -440,6 +468,8 @@ def cli_main():
             f"Trial file not found: {config['trial_path']}. "
             "Set trial_path in config.yaml or pass --trial-path /path/to/vox1_test.txt."
         )
+
+    config["root"] = resolve_eval_root(config, config_dir)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Device: ", device)

@@ -414,6 +414,7 @@ def cli_main():
     parser = ArgumentParser(description="Train CAARMA regular mixup")
     parser.add_argument("--config", default="config.yaml", help="Path to config YAML")
     parser.add_argument("--checkpoint-path", default=None, help="Optional checkpoint override")
+    parser.add_argument("--trial-path", default=None, help="Optional trial file override")
     args = parser.parse_args()
 
     config_path = Path(args.config).expanduser().resolve()
@@ -424,12 +425,21 @@ def cli_main():
         if key in config:
             config[key] = resolve_path(config[key], config_dir)
 
+    if args.trial_path is not None:
+        config["trial_path"] = resolve_path(args.trial_path, config_dir)
+
     if args.checkpoint_path is not None:
         config["checkpoint_path"] = args.checkpoint_path
     if none_like(config.get("checkpoint_path")):
         config["checkpoint_path"] = None
     else:
         config["checkpoint_path"] = resolve_path(config["checkpoint_path"], config_dir)
+
+    if not os.path.exists(config["trial_path"]):
+        raise FileNotFoundError(
+            f"Trial file not found: {config['trial_path']}. "
+            "Set trial_path in config.yaml or pass --trial-path /path/to/vox1_test.txt."
+        )
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Device: ", device)

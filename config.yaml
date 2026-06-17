@@ -13,7 +13,7 @@ criterion: 'AMSoftmaxGAN' #'AMSoftmaxGAN' #'AMSoftmaxGAN' #'Softmax' #'AMSoftmax
 init_lr: 0.001
 epochs: 30 
 weight_decay: 0.0000001 
-trial_path: "./VoxCeleb1/veri_test.txt"
+trial_path: "./data/vox1_test.txt"
 root: "./wav/"
 warmup_step: 2000
 batch_size: 200
@@ -28,4 +28,4 @@ save_dir: "caarma_mfa_ckpts"
 title: "caarma_mfa"  
 
 
-# ECAPA-LARGE WAS USED 
+# ECAPA-LARGE WAS USED

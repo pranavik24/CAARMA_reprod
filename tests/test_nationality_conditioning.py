@@ -5,6 +5,7 @@ from pathlib import Path
 
 from functions.nationality import (
     build_label_nationality_map,
+    canonical_speaker_pair,
     eligible_peer_count,
     load_vox1_nationality_by_speaker,
     same_nationality_candidates,
@@ -89,6 +90,11 @@ class NationalityMetadataTests(unittest.TestCase):
 
 
 class NationalityCandidateTests(unittest.TestCase):
+    def test_symmetric_pairs_share_one_synthetic_class_key(self):
+        self.assertEqual(canonical_speaker_pair(4, 2), (2, 4))
+        self.assertEqual(canonical_speaker_pair(2, 4), (2, 4))
+        self.assertEqual(canonical_speaker_pair(3, 3), (3, 3))
+
     def test_candidates_are_restricted_to_same_nationality(self):
         mapping = {0: "usa", 1: "india", 2: "usa", 3: "usa"}
         self.assertEqual(same_nationality_candidates(0, [0, 1, 2, 3], mapping), [2, 3])

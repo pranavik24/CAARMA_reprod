@@ -1,0 +1,31 @@
+model: MFA-CONFORMER
+features: FBank_New
+augmentations:
+  add_noise: false
+  add_reverb: false
+  drop_freq: false
+  drop_chunk: false
+dataset: ${PROJECT}/caarma-data/voxceleb_full.csv
+USE_WANDB: false
+wandb_project: mixup
+criterion: AMSoftmaxGAN
+init_lr: 0.001
+epochs: 30
+weight_decay: 0.0000001
+trial_path: data/vox1_test.txt
+root: ${PROJECT}/caarma-data/voxceleb1_test/wav
+warmup_step: 2000
+batch_size: 50
+num_workers: 16
+second: 3
+do_augmentation: false
+num_spk: 1211
+mixup: true
+nationality_mixup: true
+vox1_meta_path: vox1_meta.csv
+embedding_dim: 192
+checkpoint_path: null
+save_dir: ${PROJECT}/caarma-output/nationality
+title: caarma_nationality
+score_output_prefix: caarma_nationality
+devices: 1

@@ -1,0 +1,13 @@
+# Install these into a venv layered on PSC's current AI/PyTorch module.
+# Torch and torchaudio intentionally come from the PSC module so their CUDA ABI matches.
+asteroid-filterbanks==0.4.0
+librosa==0.10.2.post1
+pandas==2.2.3
+pytorch-lightning==2.5.0.post0
+PyYAML==6.0.2
+scikit-learn==1.6.1
+scipy==1.15.2
+soundfile==0.13.1
+speechbrain==1.0.3
+transformers==4.47.1
+wandb==0.19.7

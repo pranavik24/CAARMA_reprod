@@ -51,11 +51,10 @@ def _none_like(value: Any) -> bool:
 def _resolve_path(value: Any, base_dir: Path) -> Any:
     if _none_like(value):
         return value
-    path = Path(str(value)).expanduser()
+    path = Path(os.path.expandvars(str(value))).expanduser()
     if path.is_absolute():
         return str(path)
-    candidate = base_dir / path
-    return str(candidate) if candidate.exists() else str(path)
+    return str((base_dir / path).resolve())
 
 
 def _ensure_root_suffix(root: str) -> str:
@@ -820,7 +819,7 @@ class TestOnlyDataModule(LightningDataModule):
 
 def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
     accelerator = "gpu" if torch.cuda.is_available() else "cpu"
-    devices = -1 if accelerator == "gpu" else 1
+    devices = int(config.get("devices", 1)) if accelerator == "gpu" else 1
     precision = 16 if accelerator == "gpu" else 32
 
     logger = False

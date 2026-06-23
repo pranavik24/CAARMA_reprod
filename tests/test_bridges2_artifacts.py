@@ -22,7 +22,7 @@ class Bridges2ArtifactTests(unittest.TestCase):
         source = (ROOT / "bridges2" / "train_nationality.sbatch").read_text()
 
         self.assertIn("#SBATCH --partition=GPU-shared", source)
-        self.assertIn("#SBATCH --gres=gpu:v100-32:1", source)
+        self.assertIn("#SBATCH --gpus=v100-32:1", source)
         self.assertIn("srun", source)
         self.assertIn("mixup_nationality.py", source)
         self.assertNotIn("#SBATCH --account=", source)

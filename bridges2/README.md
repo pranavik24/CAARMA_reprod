@@ -52,7 +52,7 @@ sbatch -A <your-allocation> bridges2/train_nationality.sbatch
 ```
 
 The launcher uses the private `$HOME/.venvs/caarma` environment and requests one
-V100-32 GPU in `GPU-shared`. This is intentional:
+V100-32 GPU, 5 CPU cores, and 60GB RAM in `GPU-shared`. This is intentional:
 pairing is local to each process's batch, so starting with one GPU avoids reducing
 the number of same-nationality candidates across DDP ranks. Adjust the GPU type,
 memory, time, or batch size to match your allocation and measured usage.

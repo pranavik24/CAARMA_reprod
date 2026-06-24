@@ -3,8 +3,8 @@
 #SBATCH --partition=GPU-shared
 #SBATCH --gpus=v100-32:1
 #SBATCH --time=48:00:00
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=128G
+#SBATCH --cpus-per-task=5
+#SBATCH --mem=60G
 #SBATCH --output=caarma-nationality-%j.out
 
 set -euo pipefail
@@ -42,7 +42,7 @@ if [[ -n "$(find "${ENV_ROOT}" \( -type f -o -type d \) -perm /022 -print -quit)
     exit 2
 fi
 
-export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-16}"
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-5}"
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
 

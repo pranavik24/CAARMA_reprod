@@ -24,7 +24,7 @@ class super_dataset(LightningDataModule):
 
     def train_dataloader(self) -> DataLoader:
         # augmentation = Augmentation(add_noise=self.config['augmentations']['add_noise'], add_reverb=self.config['augmentations']['add_reverb'], drop_freq=self.config['augmentations']['drop_freq'], drop_chunk=self.config['augmentations']['drop_chunk'])
-        train_dataset = Train_Dataset(self.config['dataset'], self.config['second'], do_augmentation=self.config['do_augmentation'], augmentation=None) #augmentation)
+        train_dataset = Train_Dataset(self.config, self.config['second'], do_augmentation=self.config['do_augmentation'], augmentation=None) #augmentation)
         loader = torch.utils.data.DataLoader(
                 train_dataset,
                 shuffle=True,
@@ -52,5 +52,4 @@ class super_dataset(LightningDataModule):
 
     def test_dataloader(self) -> DataLoader:
         return self.val_dataloader()
-
 

@@ -25,6 +25,7 @@ from torch.nn.utils import spectral_norm
 from feature.build_feature import build_feature
 from functions.dataset import Evaluation_Dataset
 from functions.loader import super_dataset
+from functions.voxceleb_split import build_label_metadata_map
 from model.model_build import build_model
 
 
@@ -356,10 +357,12 @@ def build_gender_criterion(config: Dict[str, Any]) -> nn.Module:
     label_to_gender = {}
     if sl_mixup:
         try:
-            label_to_gender = build_label_gender_map(
-                config["dataset"],
-                config.get("vox1_meta_path", "vox1_meta.csv"),
-            )
+            label_to_gender = build_label_metadata_map(config, "gender")
+            if not label_to_gender:
+                label_to_gender = build_label_gender_map(
+                    config["dataset"],
+                    config.get("vox1_meta_path", "vox1_meta.csv"),
+                )
         except FileNotFoundError:
             if config.get("_mode") == "train":
                 raise

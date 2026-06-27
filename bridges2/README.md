@@ -25,18 +25,22 @@ it so the environment always receives a PSC-supported CUDA-enabled PyTorch build
 
 ## 2. Stage data
 
-The default config expects:
+The default config uses the shared server-staged VoxCeleb1 dataset directly:
 
 ```text
-$PROJECT/caarma-data/
-├── voxceleb_full.csv
-├── voxceleb1/vox1_dev_wav/wav/idNNNNN/.../*.wav
-└── voxceleb1_test/wav/idNNNNN/.../*.wav
+/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/
+├── wav/idNNNNN/.../*.wav
+└── data/
+    ├── vox1_train.csv
+    ├── vox1_val.csv
+    └── vox1_test.csv
 ```
 
-The training CSV must contain `utt_spk_int_labels`, plus a VoxCeleb id in either
-`utt_spk_id` or `utt_paths`. The notebook can rebuild this CSV from the training
-tree. The repository's `vox1_meta.csv` supplies the `Nationality` values.
+The split CSVs contain `VoxCeleb1_ID,VGGFace1_ID,Gender,Nationality,Set`. At
+runtime the dataloader expands the active speaker split into the existing
+`utt_spk_int_labels`, `utt_spk_id`, and `utt_paths` training format without
+redownloading or copying audio. Set `active_split` in the config to choose a
+different split.
 
 ## 3. Run
 

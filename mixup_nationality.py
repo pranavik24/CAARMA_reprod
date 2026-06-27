@@ -17,6 +17,7 @@ from functions.nationality import (
     eligible_peer_count,
     same_nationality_candidates,
 )
+from functions.voxceleb_split import build_label_metadata_map
 from mixup_gender import (
     Task,
     TestOnlyDataModule,
@@ -226,10 +227,12 @@ def build_nationality_criterion(config: Dict[str, Any]) -> nn.Module:
     label_to_nationality: Dict[int, str] = {}
     if enabled:
         try:
-            label_to_nationality = build_label_nationality_map(
-                config["dataset"],
-                config["vox1_meta_path"],
-            )
+            label_to_nationality = build_label_metadata_map(config, "nationality")
+            if not label_to_nationality:
+                label_to_nationality = build_label_nationality_map(
+                    config["dataset"],
+                    config["vox1_meta_path"],
+                )
         except FileNotFoundError:
             if config.get("_mode") == "train":
                 raise

@@ -3,7 +3,6 @@ import os
 import random
 
 import numpy as np
-import pandas as pd
 import torch
 from scipy import signal
 from scipy.io import wavfile
@@ -13,6 +12,8 @@ from torch.nn.utils.rnn import pad_sequence
 import soundfile as sf
 
 import torchaudio
+
+from .voxceleb_split import load_training_dataframe
 
 def load_audio(filename, second=3):
     waveform, sr = torchaudio.load(filename)
@@ -39,10 +40,26 @@ class Train_Dataset(Dataset):
     def __init__(self, train_csv_path, second=3, do_augmentation=False, augmentation=None, **kwargs):
         self.second = second
 
-        df = pd.read_csv(train_csv_path)
+        df = load_training_dataframe(train_csv_path)
         self.labels = df["utt_spk_int_labels"].values
         self.paths = df["utt_paths"].values
-        self.labels, self.paths = shuffle(self.labels, self.paths)
+        self.speaker_ids = df["utt_spk_id"].values if "utt_spk_id" in df.columns else None
+        self.genders = df["gender"].values if "gender" in df.columns else None
+        self.nationalities = df["nationality"].values if "nationality" in df.columns else None
+        shuffle_inputs = [self.labels, self.paths]
+        optional_metadata = [self.speaker_ids, self.genders, self.nationalities]
+        shuffle_inputs.extend(metadata for metadata in optional_metadata if metadata is not None)
+        shuffled = shuffle(*shuffle_inputs)
+        self.labels, self.paths = shuffled[:2]
+        metadata_index = 2
+        if self.speaker_ids is not None:
+            self.speaker_ids = shuffled[metadata_index]
+            metadata_index += 1
+        if self.genders is not None:
+            self.genders = shuffled[metadata_index]
+            metadata_index += 1
+        if self.nationalities is not None:
+            self.nationalities = shuffled[metadata_index]
         self.augmentation = augmentation
         self.do_augmentation = do_augmentation
 

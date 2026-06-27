@@ -7,7 +7,13 @@ augmentations: {
   drop_chunk: False,
 
 }
-dataset: "voxceleb_full.csv"
+dataset: null
+vox1_wav_root: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav"
+vox1_split_dir: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data"
+train_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_train.csv"
+val_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv"
+test_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv"
+active_split: "train"
 USE_WANDB: True 
 criterion: 'AMSoftmaxGAN' #'AMSoftmaxGAN' #'AMSoftmaxGAN' #'Softmax' #'AMSoftmax'
 init_lr: 0.001

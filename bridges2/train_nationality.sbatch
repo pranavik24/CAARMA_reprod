@@ -32,6 +32,10 @@ done
 module purge
 module load "${AI_MODULE}"
 
+if [[ -n "${ENV:-}" && -d "${ENV}/lib" ]]; then
+    export LD_LIBRARY_PATH="${ENV}/lib:${LD_LIBRARY_PATH:-}"
+fi
+
 PYTHON_BIN="${ENV_ROOT}/bin/python"
 if [[ ! -x "${PYTHON_BIN}" ]]; then
     echo "Missing environment: ${ENV_ROOT}" >&2
@@ -62,6 +66,7 @@ export TOKENIZERS_PARALLELISM=false
 cd "${REPO_ROOT}"
 mkdir -p "${PROJECT}/caarma-output/nationality"
 
+"${PYTHON_BIN}" -c 'import os, sys; print("Python:", sys.executable); print("AI ENV:", os.environ.get("ENV")); print("LD_LIBRARY_PATH:", os.environ.get("LD_LIBRARY_PATH", ""))'
 "${PYTHON_BIN}" -c 'import torch; assert torch.cuda.is_available(), "CUDA is not visible"; print(torch.cuda.get_device_name(0))'
 srun "${PYTHON_BIN}" -u mixup_nationality.py \
     --config "${CONFIG_PATH}" \

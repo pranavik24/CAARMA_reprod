@@ -3,8 +3,8 @@
 #SBATCH --partition=GPU-shared
 #SBATCH --gpus=v100-32:1
 #SBATCH --time=48:00:00
-#SBATCH --cpus-per-task=5
-#SBATCH --mem=60G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=62000M
 #SBATCH --output=caarma-nationality-%j.out
 
 set -euo pipefail
@@ -15,6 +15,19 @@ set -euo pipefail
 REPO_ROOT="${CAARMA_REPO_ROOT:-${PROJECT}/CAARMA_reprod}"
 CONFIG_PATH="${CAARMA_CONFIG:-${REPO_ROOT}/config_nationality_bridges2.yaml}"
 ENV_ROOT="${HOME}/.venvs/caarma"
+
+for conda_hook in \
+    /opt/packages/anaconda3/etc/profile.d/conda.sh \
+    /opt/packages/AI/anaconda3/etc/profile.d/conda.sh \
+    "${HOME}/miniconda3/etc/profile.d/conda.sh" \
+    "${HOME}/anaconda3/etc/profile.d/conda.sh"; do
+    if [[ -r "${conda_hook}" ]]; then
+        # Some PSC AI modules deactivate conda environments during module changes.
+        # Batch shells need the conda function defined before module purge/load.
+        source "${conda_hook}"
+        break
+    fi
+done
 
 module purge
 module load "${AI_MODULE}"
@@ -42,7 +55,7 @@ if [[ -n "$(find "${ENV_ROOT}" \( -type f -o -type d \) -perm /022 -print -quit)
     exit 2
 fi
 
-export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-5}"
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}"
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
 

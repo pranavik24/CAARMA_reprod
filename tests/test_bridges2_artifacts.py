@@ -23,8 +23,9 @@ class Bridges2ArtifactTests(unittest.TestCase):
 
         self.assertIn("#SBATCH --partition=GPU-shared", source)
         self.assertIn("#SBATCH --gpus=v100-32:1", source)
-        self.assertIn("#SBATCH --cpus-per-task=5", source)
-        self.assertIn("#SBATCH --mem=60G", source)
+        self.assertIn("#SBATCH --cpus-per-task=4", source)
+        self.assertIn("#SBATCH --mem=62000M", source)
+        self.assertIn("conda.sh", source)
         self.assertIn("srun", source)
         self.assertIn("mixup_nationality.py", source)
         self.assertNotIn("#SBATCH --account=", source)
@@ -32,7 +33,7 @@ class Bridges2ArtifactTests(unittest.TestCase):
     def test_static_config_does_not_oversubscribe_one_gpu_cpu_allocation(self):
         source = (ROOT / "config_nationality_bridges2.yaml").read_text()
 
-        self.assertIn("num_workers: 5", source)
+        self.assertIn("num_workers: 4", source)
 
 
 if __name__ == "__main__":

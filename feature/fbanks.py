@@ -1,26 +1,18 @@
 import librosa
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class PreEmphasis(torch.nn.Module):
     def __init__(self, coef: float = 0.97):
         super(PreEmphasis, self).__init__()
         self.coef = coef
-        # make kernel
-        # In pytorch, the convolution operation uses cross-correlation. So, filter is flipped.
-        self.register_buffer(
-            'flipped_filter', torch.FloatTensor(
-                [-self.coef, 1.]).unsqueeze(0).unsqueeze(0)
-        )
 
     def forward(self, inputs: torch.tensor) -> torch.tensor:
         assert len(
             inputs.size()) == 2, 'The number of dimensions of inputs tensor must be 2!'
-        # reflect padding to match lengths of in/out
-        inputs = inputs.unsqueeze(1)
-        inputs = F.pad(inputs, (1, 0), 'reflect')
-        return F.conv1d(inputs, self.flipped_filter).squeeze(1)
+        first_sample = inputs[:, :1] - self.coef * inputs[:, 1:2]
+        remaining_samples = inputs[:, 1:] - self.coef * inputs[:, :-1]
+        return torch.cat((first_sample, remaining_samples), dim=1)
 
 
 class Mel_Spectrogram(nn.Module):

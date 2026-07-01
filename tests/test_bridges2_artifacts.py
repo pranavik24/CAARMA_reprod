@@ -34,6 +34,7 @@ class Bridges2ArtifactTests(unittest.TestCase):
         source = (ROOT / "config_nationality_bridges2.yaml").read_text()
 
         self.assertIn("num_workers: 4", source)
+        self.assertIn("validate_during_train: false", source)
 
 
 if __name__ == "__main__":

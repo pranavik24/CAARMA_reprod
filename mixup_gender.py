@@ -465,8 +465,17 @@ class Task(LightningModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.max_epochs = max_epochs
-        self.trials = np.loadtxt(trial_path, str)
         self.config = config
+        self.trials = None
+        should_load_trials = (
+            config.get("_mode") != "train"
+            or _as_bool(config.get("validate_during_train", True))
+            or Path(trial_path).exists()
+        )
+        if should_load_trials:
+            self.trials = np.loadtxt(trial_path, str)
+        else:
+            print(f"Skipping training validation because trial_path was not found: {trial_path}")
         self.automatic_optimization = False
 
         embedding_dim = int(self.config.get("embedding_dim", 192))
@@ -838,12 +847,24 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
 
     callbacks = []
     if mode == "train":
+        validate_during_train = _as_bool(config.get("validate_during_train", True))
+        checkpoint_kwargs = (
+            {
+                "monitor": "cosine_eer",
+                "save_top_k": 100,
+                "filename": "{epoch}_{cosine_eer:.2f}",
+            }
+            if validate_during_train
+            else {
+                "save_last": True,
+                "save_top_k": 1,
+                "filename": "{epoch}",
+            }
+        )
         callbacks.append(
             ModelCheckpoint(
-                monitor="cosine_eer",
-                save_top_k=100,
-                filename="{epoch}_{cosine_eer:.2f}",
                 dirpath=config["save_dir"],
+                **checkpoint_kwargs,
             )
         )
         if logger:
@@ -865,6 +886,7 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
         callbacks=callbacks,
         default_root_dir=config["save_dir"],
         reload_dataloaders_every_n_epochs=1,
+        limit_val_batches=1.0 if mode != "train" or _as_bool(config.get("validate_during_train", True)) else 0,
         accumulate_grad_batches=1,
         log_every_n_steps=25,
         benchmark=True,

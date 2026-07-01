@@ -28,6 +28,7 @@ do_augmentation: false
 num_spk: 1211
 mixup: true
 nationality_mixup: true
+validate_during_train: false
 vox1_meta_path: vox1_meta.csv
 embedding_dim: 192
 checkpoint_path: null

@@ -23,6 +23,7 @@ root: ${PROJECT}/caarma-data/voxceleb1_test/wav
 warmup_step: 2000
 batch_size: 50
 num_workers: 4
+train_drop_last: true
 second: 3
 do_augmentation: false
 num_spk: 1211

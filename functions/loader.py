@@ -10,6 +10,12 @@ from .dataset import Evaluation_Dataset, Train_Dataset
 from .augmentation import Augmentation
 
 
+def _as_bool(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
 class super_dataset(LightningDataModule):
     def __init__(
         self,
@@ -31,7 +37,7 @@ class super_dataset(LightningDataModule):
                 num_workers=self.config['num_workers'],
                 batch_size=self.config['batch_size'],
                 pin_memory=True,
-                drop_last=False,
+                drop_last=_as_bool(self.config.get('train_drop_last', True)),
                 )
         return loader
 
@@ -52,4 +58,3 @@ class super_dataset(LightningDataModule):
 
     def test_dataloader(self) -> DataLoader:
         return self.val_dataloader()
-

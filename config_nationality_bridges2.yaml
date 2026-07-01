@@ -12,8 +12,8 @@ train_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_
 val_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv
 test_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv
 active_split: train
-USE_WANDB: false
-wandb_project: mixup
+USE_WANDB: true
+wandb_project: caarma-nationality
 criterion: AMSoftmaxGAN
 init_lr: 0.001
 epochs: 30

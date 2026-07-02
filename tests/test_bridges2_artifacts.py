@@ -34,8 +34,12 @@ class Bridges2ArtifactTests(unittest.TestCase):
         source = (ROOT / "config_nationality_bridges2.yaml").read_text()
 
         self.assertIn("num_workers: 4", source)
+        self.assertIn("val_num_workers: 4", source)
         self.assertIn("train_drop_last: true", source)
-        self.assertIn("validate_during_train: false", source)
+        self.assertIn("USE_WANDB: true", source)
+        self.assertIn("generate_validation_trials: true", source)
+        self.assertIn("validation_split: val", source)
+        self.assertIn("validate_during_train: true", source)
 
 
 if __name__ == "__main__":

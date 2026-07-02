@@ -25,7 +25,7 @@ from torch.nn.utils import spectral_norm
 from feature.build_feature import build_feature
 from functions.dataset import Evaluation_Dataset
 from functions.loader import super_dataset
-from functions.voxceleb_split import build_label_metadata_map
+from functions.voxceleb_split import build_label_metadata_map, load_validation_trials
 from model.model_build import build_model
 
 
@@ -473,7 +473,8 @@ class Task(LightningModule):
             or Path(trial_path).exists()
         )
         if should_load_trials:
-            self.trials = np.loadtxt(trial_path, str)
+            self.trials, validation_root = load_validation_trials(config)
+            self.config["root"] = validation_root
         else:
             print(f"Skipping training validation because trial_path was not found: {trial_path}")
         self.automatic_optimization = False
@@ -795,15 +796,15 @@ class Task(LightningModule):
                 f.write(f"{line}\n")
 
         print("\ncosine EER: {:.2f}% with threshold {:.2f}".format(eer * 100, threshold))
-        self.log("cosine_eer", eer * 100)
+        self.log("cosine_eer", eer * 100, on_epoch=True, sync_dist=True)
 
         minDCF, threshold = self.compute_minDCF(labels, scores, p_target=0.01)
         print("cosine minDCF(10-2): {:.2f} with threshold {:.2f}".format(minDCF, threshold))
-        self.log("cosine_minDCF(10-2)", minDCF)
+        self.log("cosine_minDCF(10-2)", minDCF, on_epoch=True, sync_dist=True)
 
         minDCF, threshold = self.compute_minDCF(labels, scores, p_target=0.001)
         print("cosine minDCF(10-3): {:.2f} with threshold {:.2f}".format(minDCF, threshold))
-        self.log("cosine_minDCF(10-3)", minDCF)
+        self.log("cosine_minDCF(10-3)", minDCF, on_epoch=True, sync_dist=True)
 
 
 class TestOnlyDataModule(LightningDataModule):

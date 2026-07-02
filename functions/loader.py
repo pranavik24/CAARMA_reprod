@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 from .dataset import Evaluation_Dataset, Train_Dataset
 from .augmentation import Augmentation
+from .voxceleb_split import load_validation_trials
 
 
 def _as_bool(value):
@@ -42,16 +43,16 @@ class super_dataset(LightningDataModule):
         return loader
 
     def val_dataloader(self) -> DataLoader:
-        trials = np.loadtxt(self.config['trial_path'], str)
+        trials, root = load_validation_trials(self.config)
         self.trials = trials
         eval_path = np.unique(np.concatenate((trials.T[1], trials.T[2])))
         print("number of enroll: {}".format(len(set(trials.T[1]))))
         print("number of test: {}".format(len(set(trials.T[2]))))
         print("number of evaluation: {}".format(len(eval_path)))
         # eval_dataset = Evaluation_Dataset(eval_path, second=-1)
-        eval_dataset = Evaluation_Dataset(eval_path, root=self.config['root'])
+        eval_dataset = Evaluation_Dataset(eval_path, root=root)
         loader = torch.utils.data.DataLoader(eval_dataset,
-                                             num_workers=10,
+                                             num_workers=int(self.config.get("val_num_workers", min(int(self.config["num_workers"]), 4))),
                                              shuffle=False, 
                                              batch_size=1)
         return loader

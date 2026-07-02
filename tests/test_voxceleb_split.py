@@ -6,8 +6,10 @@ from pathlib import Path
 from functions.voxceleb_split import (
     build_examples_from_split_csv,
     build_label_metadata_map,
+    build_trials_from_split_csv,
     is_voxceleb_split_csv,
     load_training_dataframe,
+    load_validation_trials,
     resolve_split_csv_path,
 )
 
@@ -187,6 +189,81 @@ class VoxCelebSplitTests(unittest.TestCase):
 
         self.assertEqual(build_label_metadata_map(config, "gender"), {0: "f", 1: "m"})
         self.assertEqual(build_label_metadata_map(config, "nationality"), {0: "india", 1: "usa"})
+
+    def test_builds_balanced_validation_trials_from_split(self):
+        split_path = self.write_split(
+            "vox1_val.csv",
+            [
+                {
+                    "VoxCeleb1_ID": "id10002",
+                    "VGGFace1_ID": "person_b",
+                    "Gender": "m",
+                    "Nationality": "USA",
+                    "Set": "val",
+                },
+                {
+                    "VoxCeleb1_ID": "id10001",
+                    "VGGFace1_ID": "person_a",
+                    "Gender": "f",
+                    "Nationality": "India",
+                    "Set": "val",
+                },
+            ],
+        )
+        self.touch_wav("id10002", "video_b/00001.wav")
+        self.touch_wav("id10002", "video_b/00002.wav")
+        self.touch_wav("id10001", "video_a/00001.wav")
+        self.touch_wav("id10001", "video_a/00002.wav")
+
+        trials = build_trials_from_split_csv(split_path, self.wav_root)
+
+        self.assertEqual(
+            trials.tolist(),
+            [
+                ["1", "id10001/video_a/00001.wav", "id10001/video_a/00002.wav"],
+                ["1", "id10002/video_b/00001.wav", "id10002/video_b/00002.wav"],
+                ["0", "id10001/video_a/00001.wav", "id10002/video_b/00001.wav"],
+                ["0", "id10002/video_b/00001.wav", "id10001/video_a/00001.wav"],
+            ],
+        )
+
+    def test_load_validation_trials_generates_when_trial_file_is_missing(self):
+        split_path = self.write_split(
+            "vox1_val.csv",
+            [
+                {
+                    "VoxCeleb1_ID": "id10001",
+                    "VGGFace1_ID": "person_a",
+                    "Gender": "f",
+                    "Nationality": "India",
+                    "Set": "val",
+                },
+                {
+                    "VoxCeleb1_ID": "id10002",
+                    "VGGFace1_ID": "person_b",
+                    "Gender": "m",
+                    "Nationality": "USA",
+                    "Set": "val",
+                },
+            ],
+        )
+        self.touch_wav("id10001", "video_a/00001.wav")
+        self.touch_wav("id10001", "video_a/00002.wav")
+        self.touch_wav("id10002", "video_b/00001.wav")
+        self.touch_wav("id10002", "video_b/00002.wav")
+
+        trials, root = load_validation_trials(
+            {
+                "trial_path": str(self.root / "missing_trials.txt"),
+                "generate_validation_trials": True,
+                "val_split_csv": str(split_path),
+                "vox1_wav_root": str(self.wav_root),
+                "validation_split": "val",
+            }
+        )
+
+        self.assertEqual(root, str(self.wav_root))
+        self.assertEqual(trials.shape, (4, 3))
 
 
 if __name__ == "__main__":

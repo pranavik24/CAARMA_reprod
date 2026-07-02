@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Mapping
 import os
 
+import numpy as np
 import pandas as pd
 
 
@@ -37,6 +38,17 @@ def resolve_split_csv_path(config: Mapping[str, object]) -> Path:
 
     split_dir = _resolve_path(config.get("vox1_split_dir", SERVER_SPLIT_DIR))
     return split_dir / f"vox1_{active_split}.csv"
+
+
+def resolve_named_split_csv_path(config: Mapping[str, object], split_name: str) -> Path:
+    split = str(split_name).strip().lower()
+    split_key = f"{split}_split_csv"
+    configured_split = config.get(split_key)
+    if configured_split:
+        return _resolve_path(configured_split)
+
+    split_dir = _resolve_path(config.get("vox1_split_dir", SERVER_SPLIT_DIR))
+    return split_dir / f"vox1_{split}.csv"
 
 
 def _normalize_speaker_id(value: object) -> str:
@@ -147,3 +159,76 @@ def build_label_metadata_map(
         if value and value not in {"nan", "none", "null", "n/a", "na"}:
             result[label] = value
     return result
+
+
+def _relative_or_absolute(path: str | Path, root: Path) -> str:
+    path = Path(path)
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
+
+
+def build_trials_from_split_csv(
+    split_csv_path: str | Path,
+    wav_root: str | Path,
+    max_speakers: int | None = None,
+) -> np.ndarray:
+    """Build deterministic positive/negative verification trials from a split CSV."""
+
+    wav_root_path = _resolve_path(wav_root)
+    examples = build_examples_from_split_csv(split_csv_path, wav_root_path)
+    grouped = {
+        speaker_id: sorted(group["utt_paths"].tolist())
+        for speaker_id, group in examples.groupby("utt_spk_id")
+    }
+    speakers = [speaker for speaker in sorted(grouped) if len(grouped[speaker]) >= 2]
+    if max_speakers is not None and max_speakers > 0:
+        speakers = speakers[:max_speakers]
+    if len(speakers) < 2:
+        raise ValueError("At least two speakers with two WAV files each are required for validation trials.")
+
+    records = []
+    for speaker in speakers:
+        wavs = grouped[speaker]
+        records.append(
+            [
+                "1",
+                _relative_or_absolute(wavs[0], wav_root_path),
+                _relative_or_absolute(wavs[1], wav_root_path),
+            ]
+        )
+
+    for left, right in zip(speakers, speakers[1:] + speakers[:1]):
+        records.append(
+            [
+                "0",
+                _relative_or_absolute(grouped[left][0], wav_root_path),
+                _relative_or_absolute(grouped[right][0], wav_root_path),
+            ]
+        )
+
+    return np.array(records, dtype=str)
+
+
+def load_validation_trials(config: Mapping[str, object]) -> tuple[np.ndarray, str]:
+    """Load official trials or generate split-based validation trials."""
+
+    trial_path = config.get("trial_path")
+    if trial_path and _resolve_path(trial_path).exists():
+        return np.loadtxt(_resolve_path(trial_path), str), str(config["root"])
+
+    if str(config.get("generate_validation_trials", False)).strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "y",
+    }:
+        raise FileNotFoundError(f"{trial_path} not found.")
+
+    split_name = str(config.get("validation_split", "val"))
+    split_path = resolve_named_split_csv_path(config, split_name)
+    wav_root = str(config.get("vox1_wav_root", SERVER_WAV_ROOT))
+    max_speakers_value = config.get("validation_max_speakers", 300)
+    max_speakers = int(max_speakers_value) if max_speakers_value is not None else None
+    return build_trials_from_split_csv(split_path, wav_root, max_speakers=max_speakers), wav_root

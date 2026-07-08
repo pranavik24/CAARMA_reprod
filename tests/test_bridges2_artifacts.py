@@ -33,10 +33,12 @@ class Bridges2ArtifactTests(unittest.TestCase):
     def test_static_config_does_not_oversubscribe_one_gpu_cpu_allocation(self):
         source = (ROOT / "config_nationality_bridges2.yaml").read_text()
 
+        self.assertIn("epochs: 20", source)
         self.assertIn("num_workers: 4", source)
         self.assertIn("val_num_workers: 4", source)
         self.assertIn("train_drop_last: true", source)
         self.assertIn("USE_WANDB: true", source)
+        self.assertIn("discriminator: simple", source)
         self.assertIn("generate_validation_trials: true", source)
         self.assertIn("validation_split: val", source)
         self.assertIn("validate_during_train: true", source)

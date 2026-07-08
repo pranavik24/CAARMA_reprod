@@ -16,7 +16,7 @@ USE_WANDB: true
 wandb_project: caarma-nationality
 criterion: AMSoftmaxGAN
 init_lr: 0.001
-epochs: 30
+epochs: 20
 weight_decay: 0.0000001
 trial_path: data/vox1_test.txt
 root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
@@ -33,6 +33,9 @@ do_augmentation: false
 num_spk: 1211
 mixup: true
 nationality_mixup: true
+discriminator: simple
+discriminator_hidden_dim: 256
+discriminator_dropout: 0.1
 validate_during_train: true
 vox1_meta_path: vox1_meta.csv
 embedding_dim: 192

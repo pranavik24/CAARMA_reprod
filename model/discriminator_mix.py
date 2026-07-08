@@ -158,6 +158,28 @@ class ResidualMLPBlock(nn.Module):
         return self.act(self.main(x) + self.skip(x))
 
 
+class SimpleDiscriminator(nn.Module):
+    """Small embedding discriminator with two residual MLP blocks."""
+
+    def __init__(self, emb_dim=192, hidden_dim=256, dropout_rate=0.1):
+        super().__init__()
+        self.discriminator = nn.Sequential(
+            ResidualMLPBlock(emb_dim, hidden_dim, dropout_rate),
+            ResidualMLPBlock(hidden_dim, hidden_dim, dropout_rate),
+            spectral_norm(nn.Linear(hidden_dim, 1)),
+        )
+
+    def forward(self, x):
+        if x.dim() == 3 and x.size(1) == 1:
+            x = x.squeeze(1)
+        if x.dim() != 2:
+            raise ValueError(
+                "SimpleDiscriminator expects pooled embeddings of shape (B, E), "
+                f"but got {tuple(x.shape)}"
+            )
+        return self.discriminator(F.normalize(x, p=2, dim=-1))
+
+
 class Discriminator2(nn.Module):
     def __init__(
         self,

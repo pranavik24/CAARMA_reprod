@@ -49,6 +49,12 @@ def prepare_config(config: Dict[str, Any], config_path: Path, args: Any) -> Dict
         prepared["vox1_meta_path"] = args.vox1_meta_path
     prepared.setdefault("vox1_meta_path", "vox1_meta.csv")
 
+    if getattr(args, "validation_split", None) is not None:
+        prepared["validation_split"] = args.validation_split
+        prepared["generate_validation_trials"] = True
+    if getattr(args, "score_output_prefix", None) is not None:
+        prepared["score_output_prefix"] = args.score_output_prefix
+
     for argument, key in (
         (args.checkpoint_path, "checkpoint_path"),
         (args.trial_path, "trial_path"),
@@ -295,6 +301,8 @@ def parse_args():
     parser.add_argument("--trial-path", default=None)
     parser.add_argument("--root", default=None)
     parser.add_argument("--vox1-meta-path", default=None)
+    parser.add_argument("--validation-split", choices=("train", "val", "test"), default=None)
+    parser.add_argument("--score-output-prefix", default=None)
     parser.add_argument(
         "--nationality-mixup",
         dest="nationality_mixup",
@@ -336,6 +344,7 @@ def cli_main() -> None:
             trial_path=config["trial_path"],
             root=config["root"],
             num_workers=min(int(config.get("num_workers", 10)), 10),
+            config=config,
         )
         trainer.test(task, datamodule=test_datamodule)
 

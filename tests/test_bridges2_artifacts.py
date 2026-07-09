@@ -30,6 +30,17 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("mixup_nationality.py", source)
         self.assertNotIn("#SBATCH --account=", source)
 
+    def test_test_slurm_script_runs_nationality_test_mode(self):
+        source = (ROOT / "bridges2" / "test_nationality.sbatch").read_text()
+
+        self.assertIn("#SBATCH --gpus=v100-32:1", source)
+        self.assertIn("CAARMA_CHECKPOINT", source)
+        self.assertIn("--mode test", source)
+        self.assertIn("--validation-split", source)
+        self.assertIn("TEST_SPLIT=\"${CAARMA_TEST_SPLIT:-test}\"", source)
+        self.assertIn("srun", source)
+        self.assertNotIn("#SBATCH --account=", source)
+
     def test_static_config_does_not_oversubscribe_one_gpu_cpu_allocation(self):
         source = (ROOT / "config_nationality_bridges2.yaml").read_text()
 

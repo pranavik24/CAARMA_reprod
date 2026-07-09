@@ -829,20 +829,29 @@ class Task(LightningModule):
 
 
 class TestOnlyDataModule(LightningDataModule):
-    def __init__(self, trial_path: str, root: str, num_workers: int = 10):
+    def __init__(
+        self,
+        trial_path: str,
+        root: str,
+        num_workers: int = 10,
+        config: Optional[Dict[str, Any]] = None,
+    ):
         super().__init__()
+        self.config = dict(config or {})
+        self.config.setdefault("trial_path", trial_path)
+        self.config.setdefault("root", root)
         self.trial_path = trial_path
         self.root = _ensure_root_suffix(root)
         self.num_workers = num_workers
 
     def test_dataloader(self):
-        trials = np.loadtxt(self.trial_path, str)
+        trials, root = load_validation_trials(self.config)
         eval_path = np.unique(np.concatenate((trials.T[1], trials.T[2])))
         print("number of enroll:", len(set(trials.T[1])))
         print("number of test:", len(set(trials.T[2])))
         print("number of evaluation:", len(eval_path))
 
-        eval_dataset = Evaluation_Dataset(eval_path, root=self.root)
+        eval_dataset = Evaluation_Dataset(eval_path, root=root)
         return torch.utils.data.DataLoader(
             eval_dataset,
             num_workers=self.num_workers,
@@ -857,7 +866,7 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
     precision = 16 if accelerator == "gpu" else 32
 
     logger = False
-    if mode == "train" and _as_bool(config.get("USE_WANDB", False)):
+    if mode in {"train", "test"} and _as_bool(config.get("USE_WANDB", False)):
         from pytorch_lightning.loggers import WandbLogger
 
         logger = WandbLogger(

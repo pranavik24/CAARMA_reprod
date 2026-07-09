@@ -513,6 +513,10 @@ class Task(LightningModule):
         x_norm = torch.norm(x, p=2, dim=1, keepdim=True).clamp(min=1e-12)
         return torch.div(x, x_norm)
 
+    def set_discriminator_requires_grad(self, requires_grad: bool):
+        for parameter in self.discriminator.parameters():
+            parameter.requires_grad_(requires_grad)
+
     def forward(self, x):
         feature = self.features(x)
         embedding = self.model(feature)
@@ -561,6 +565,7 @@ class Task(LightningModule):
             if self.g_step_counter < 5:
                 self.lambda_adv = 0.0005
                 optimizer_main.zero_grad()
+                self.set_discriminator_requires_grad(False)
                 real_preds = self.discriminator(self.normalize(embedding.detach()))
                 fake_preds = self.discriminator(self.normalize(synthetic_embeddings))
                 fake_labels = torch.zeros(real_preds.size(), device=self.device)
@@ -597,9 +602,11 @@ class Task(LightningModule):
                         pg["lr"] = lr_scale * self.learning_rate
                 print("gloss")
                 self.g_step_counter += 1
+                self.set_discriminator_requires_grad(True)
                 return total_loss
 
             if self.d_step_counter < 1:
+                self.set_discriminator_requires_grad(True)
                 d_optimizer.zero_grad()
                 real_preds = self.discriminator(self.normalize(embedding.detach()))
                 fake_preds = self.discriminator(self.normalize(synthetic_embeddings.detach()))
@@ -617,6 +624,7 @@ class Task(LightningModule):
                 return d_loss
 
         if self.d_step_counter < 1:
+            self.set_discriminator_requires_grad(True)
             d_optimizer.zero_grad()
             real_preds = self.discriminator(self.normalize(embedding.detach()))
             fake_preds = self.discriminator(self.normalize(synthetic_embeddings.detach()))
@@ -635,6 +643,7 @@ class Task(LightningModule):
 
         if self.d_step_counter >= 1 and self.g_step_counter < 1:
             optimizer_main.zero_grad()
+            self.set_discriminator_requires_grad(False)
             self.lambda_adv = 0.25
             real_preds = self.discriminator(self.normalize(embedding.detach()))
             fake_preds = self.discriminator(self.normalize(synthetic_embeddings))
@@ -673,6 +682,7 @@ class Task(LightningModule):
                     pg["lr"] = lr_scale * self.learning_rate
             print("gloss")
             self.g_step_counter += 1
+            self.set_discriminator_requires_grad(True)
             return total_loss
 
         return amsoftmax_loss

@@ -169,12 +169,31 @@ def _relative_or_absolute(path: str | Path, root: Path) -> str:
         return str(path)
 
 
+def _session_key(path: str | Path, wav_root: Path, speaker_id: str) -> str:
+    path = Path(path)
+    try:
+        relative = path.relative_to(wav_root / speaker_id)
+    except ValueError:
+        relative = path
+    return relative.parts[0] if relative.parts else str(path.parent)
+
+
+def _cross_session_pair(paths: list[str], wav_root: Path, speaker_id: str) -> tuple[str, str] | None:
+    by_session: dict[str, str] = {}
+    for path in sorted(paths):
+        by_session.setdefault(_session_key(path, wav_root, speaker_id), path)
+    if len(by_session) < 2:
+        return None
+    selected = [by_session[session] for session in sorted(by_session)[:2]]
+    return selected[0], selected[1]
+
+
 def build_trials_from_split_csv(
     split_csv_path: str | Path,
     wav_root: str | Path,
     max_speakers: int | None = None,
 ) -> np.ndarray:
-    """Build deterministic positive/negative verification trials from a split CSV."""
+    """Build deterministic cross-session positive/negative trials from a split CSV."""
 
     wav_root_path = _resolve_path(wav_root)
     examples = build_examples_from_split_csv(split_csv_path, wav_root_path)
@@ -182,29 +201,39 @@ def build_trials_from_split_csv(
         speaker_id: sorted(group["utt_paths"].tolist())
         for speaker_id, group in examples.groupby("utt_spk_id")
     }
-    speakers = [speaker for speaker in sorted(grouped) if len(grouped[speaker]) >= 2]
+    positive_pairs = {
+        speaker: pair
+        for speaker in sorted(grouped)
+        if (pair := _cross_session_pair(grouped[speaker], wav_root_path, speaker)) is not None
+    }
+    speakers = sorted(positive_pairs)
     if max_speakers is not None and max_speakers > 0:
         speakers = speakers[:max_speakers]
     if len(speakers) < 2:
-        raise ValueError("At least two speakers with two WAV files each are required for validation trials.")
+        raise ValueError(
+            "At least two speakers with WAV files from two different sessions are required "
+            "for generated validation trials."
+        )
 
     records = []
     for speaker in speakers:
-        wavs = grouped[speaker]
+        enroll_wav, test_wav = positive_pairs[speaker]
         records.append(
             [
                 "1",
-                _relative_or_absolute(wavs[0], wav_root_path),
-                _relative_or_absolute(wavs[1], wav_root_path),
+                _relative_or_absolute(enroll_wav, wav_root_path),
+                _relative_or_absolute(test_wav, wav_root_path),
             ]
         )
 
     for left, right in zip(speakers, speakers[1:] + speakers[:1]):
+        left_wav, _ = positive_pairs[left]
+        right_wav, _ = positive_pairs[right]
         records.append(
             [
                 "0",
-                _relative_or_absolute(grouped[left][0], wav_root_path),
-                _relative_or_absolute(grouped[right][0], wav_root_path),
+                _relative_or_absolute(left_wav, wav_root_path),
+                _relative_or_absolute(right_wav, wav_root_path),
             ]
         )
 

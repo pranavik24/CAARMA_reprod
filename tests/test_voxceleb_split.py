@@ -211,17 +211,17 @@ class VoxCelebSplitTests(unittest.TestCase):
             ],
         )
         self.touch_wav("id10002", "video_b/00001.wav")
-        self.touch_wav("id10002", "video_b/00002.wav")
+        self.touch_wav("id10002", "video_c/00001.wav")
         self.touch_wav("id10001", "video_a/00001.wav")
-        self.touch_wav("id10001", "video_a/00002.wav")
+        self.touch_wav("id10001", "video_b/00001.wav")
 
         trials = build_trials_from_split_csv(split_path, self.wav_root)
 
         self.assertEqual(
             trials.tolist(),
             [
-                ["1", "id10001/video_a/00001.wav", "id10001/video_a/00002.wav"],
-                ["1", "id10002/video_b/00001.wav", "id10002/video_b/00002.wav"],
+                ["1", "id10001/video_a/00001.wav", "id10001/video_b/00001.wav"],
+                ["1", "id10002/video_b/00001.wav", "id10002/video_c/00001.wav"],
                 ["0", "id10001/video_a/00001.wav", "id10002/video_b/00001.wav"],
                 ["0", "id10002/video_b/00001.wav", "id10001/video_a/00001.wav"],
             ],
@@ -248,9 +248,9 @@ class VoxCelebSplitTests(unittest.TestCase):
             ],
         )
         self.touch_wav("id10001", "video_a/00001.wav")
-        self.touch_wav("id10001", "video_a/00002.wav")
+        self.touch_wav("id10001", "video_b/00001.wav")
         self.touch_wav("id10002", "video_b/00001.wav")
-        self.touch_wav("id10002", "video_b/00002.wav")
+        self.touch_wav("id10002", "video_c/00001.wav")
 
         trials, root = load_validation_trials(
             {
@@ -264,6 +264,34 @@ class VoxCelebSplitTests(unittest.TestCase):
 
         self.assertEqual(root, str(self.wav_root))
         self.assertEqual(trials.shape, (4, 3))
+
+    def test_generated_validation_trials_require_cross_session_positive_pairs(self):
+        split_path = self.write_split(
+            "vox1_val.csv",
+            [
+                {
+                    "VoxCeleb1_ID": "id10001",
+                    "VGGFace1_ID": "person_a",
+                    "Gender": "f",
+                    "Nationality": "India",
+                    "Set": "val",
+                },
+                {
+                    "VoxCeleb1_ID": "id10002",
+                    "VGGFace1_ID": "person_b",
+                    "Gender": "m",
+                    "Nationality": "USA",
+                    "Set": "val",
+                },
+            ],
+        )
+        self.touch_wav("id10001", "video_a/00001.wav")
+        self.touch_wav("id10001", "video_a/00002.wav")
+        self.touch_wav("id10002", "video_b/00001.wav")
+        self.touch_wav("id10002", "video_b/00002.wav")
+
+        with self.assertRaisesRegex(ValueError, "different sessions"):
+            build_trials_from_split_csv(split_path, self.wav_root)
 
 
 if __name__ == "__main__":

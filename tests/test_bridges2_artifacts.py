@@ -41,6 +41,19 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("srun", source)
         self.assertNotIn("#SBATCH --account=", source)
 
+    def test_gender_slurm_script_runs_gender_entrypoint(self):
+        source = (ROOT / "bridges2" / "train_gender.sbatch").read_text()
+
+        self.assertIn("#SBATCH --gpus=v100-32:1", source)
+        self.assertIn("#SBATCH --cpus-per-task=4", source)
+        self.assertIn("#SBATCH --mem=62000M", source)
+        self.assertIn("conda.sh", source)
+        self.assertIn("mixup_gender.py", source)
+        self.assertIn("--mode train", source)
+        self.assertIn("--sl-mixup", source)
+        self.assertIn("srun", source)
+        self.assertNotIn("#SBATCH --account=", source)
+
     def test_static_config_does_not_oversubscribe_one_gpu_cpu_allocation(self):
         source = (ROOT / "config_nationality_bridges2.yaml").read_text()
 
@@ -53,6 +66,18 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("generate_validation_trials: true", source)
         self.assertIn("validation_split: val", source)
         self.assertIn("validate_during_train: true", source)
+
+    def test_gender_config_uses_server_splits_and_simple_discriminator(self):
+        source = (ROOT / "config_gender_bridges2.yaml").read_text()
+
+        self.assertIn("USE_WANDB: true", source)
+        self.assertIn("wandb_project: caarma-gender", source)
+        self.assertIn("epochs: 20", source)
+        self.assertIn("sl_mixup: true", source)
+        self.assertIn("discriminator: simple", source)
+        self.assertIn("generate_validation_trials: true", source)
+        self.assertIn("validate_during_train: true", source)
+        self.assertIn("save_dir: ${PROJECT}/caarma-output/gender", source)
 
 
 if __name__ == "__main__":

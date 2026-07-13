@@ -273,7 +273,7 @@ def mixup_data_euc_avg_gender(
         paired_positions = label_positions.get(paired_speaker, [row_idx])
         pair_indices.append(paired_positions[0] if paired_speaker != speaker else row_idx)
 
-        pair_key = (speaker, paired_speaker)
+        pair_key = (min(speaker, paired_speaker), max(speaker, paired_speaker))
         if pair_key not in synthetic_label_by_pair:
             synthetic_label_by_pair[pair_key] = next_synthetic_label
             w_mix[:, next_synthetic_label] = (

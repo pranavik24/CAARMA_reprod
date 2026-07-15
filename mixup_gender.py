@@ -26,7 +26,7 @@ from feature.build_feature import build_feature
 from functions.dataset import Evaluation_Dataset
 from functions.loader import super_dataset
 from functions.voxceleb_split import build_label_metadata_map, load_validation_trials
-from model.discriminator_mix import SimpleDiscriminator
+from model.discriminator_mix import InterDiscrim, SimpleDiscriminator
 from model.model_build import build_model
 
 
@@ -444,12 +444,22 @@ def build_embedding_discriminator(config: Dict[str, Any]) -> nn.Module:
     discriminator_name = str(config.get("discriminator", "simple")).strip().lower()
     embedding_dim = int(config.get("embedding_dim", 192))
     hidden_dim = int(config.get("discriminator_hidden_dim", 256))
+    mid_dim = int(config.get("discriminator_mid_dim", max(hidden_dim // 2, 1)))
+    head_dim = int(config.get("discriminator_head_dim", 128))
     dropout_rate = float(config.get("discriminator_dropout", 0.1))
 
     if discriminator_name == "simple":
         return SimpleDiscriminator(
             emb_dim=embedding_dim,
             hidden_dim=hidden_dim,
+            dropout_rate=dropout_rate,
+        )
+    if discriminator_name in {"inter", "intermediate", "interdiscrim"}:
+        return InterDiscrim(
+            emb_dim=embedding_dim,
+            hidden_dim=hidden_dim,
+            mid_dim=mid_dim,
+            head_dim=head_dim,
             dropout_rate=dropout_rate,
         )
     if discriminator_name in {"mixup", "legacy"}:

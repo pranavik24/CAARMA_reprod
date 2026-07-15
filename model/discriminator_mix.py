@@ -180,6 +180,42 @@ class SimpleDiscriminator(nn.Module):
         return self.discriminator(F.normalize(x, p=2, dim=-1))
 
 
+class InterDiscrim(nn.Module):
+    """Intermediate embedding discriminator with wider residual MLP capacity."""
+
+    def __init__(
+        self,
+        emb_dim=192,
+        hidden_dim=512,
+        mid_dim=384,
+        head_dim=128,
+        dropout_rate=0.15,
+    ):
+        super().__init__()
+        self.discriminator = nn.Sequential(
+            ResidualMLPBlock(emb_dim, hidden_dim, dropout_rate),
+            ResidualMLPBlock(hidden_dim, hidden_dim, dropout_rate),
+            ResidualMLPBlock(hidden_dim, mid_dim, dropout_rate),
+            ResidualMLPBlock(mid_dim, mid_dim, dropout_rate),
+            MinibatchStdDev(),
+            spectral_norm(nn.Linear(mid_dim + 1, head_dim)),
+            nn.LayerNorm(head_dim),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(dropout_rate),
+            spectral_norm(nn.Linear(head_dim, 1)),
+        )
+
+    def forward(self, x):
+        if x.dim() == 3 and x.size(1) == 1:
+            x = x.squeeze(1)
+        if x.dim() != 2:
+            raise ValueError(
+                "InterDiscrim expects pooled embeddings of shape (B, E), "
+                f"but got {tuple(x.shape)}"
+            )
+        return self.discriminator(F.normalize(x, p=2, dim=-1))
+
+
 class Discriminator2(nn.Module):
     def __init__(
         self,

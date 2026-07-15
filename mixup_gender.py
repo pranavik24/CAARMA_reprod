@@ -902,7 +902,9 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
         checkpoint_kwargs = (
             {
                 "monitor": "cosine_eer",
-                "save_top_k": 100,
+                "mode": "min",
+                "save_top_k": int(config.get("save_top_k", 3)),
+                "save_last": True,
                 "filename": "{epoch}_{cosine_eer:.2f}",
             }
             if validate_during_train

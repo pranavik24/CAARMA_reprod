@@ -67,14 +67,21 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("validation_split: val", source)
         self.assertIn("validate_during_train: true", source)
 
-    def test_gender_config_uses_server_splits_and_simple_discriminator(self):
+    def test_gender_config_uses_server_splits_and_intermediate_discriminator(self):
         source = (ROOT / "config_gender_bridges2.yaml").read_text()
 
         self.assertIn("USE_WANDB: true", source)
         self.assertIn("wandb_project: caarma-gender", source)
-        self.assertIn("epochs: 20", source)
+        self.assertIn("init_lr: 0.0003", source)
+        self.assertIn("epochs: 30", source)
+        self.assertIn("batch_size: 100", source)
         self.assertIn("sl_mixup: true", source)
-        self.assertIn("discriminator: simple", source)
+        self.assertIn("discriminator: intermediate", source)
+        self.assertIn("discriminator_hidden_dim: 512", source)
+        self.assertIn("discriminator_mid_dim: 384", source)
+        self.assertIn("discriminator_head_dim: 128", source)
+        self.assertIn("discriminator_dropout: 0.15", source)
+        self.assertIn("save_top_k: 3", source)
         self.assertIn("generate_validation_trials: true", source)
         self.assertIn("validate_during_train: true", source)
         self.assertIn("save_dir: ${PROJECT}/caarma-output/gender", source)

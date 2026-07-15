@@ -1,8 +1,9 @@
 import unittest
+from tempfile import TemporaryDirectory
 
 import torch
 
-from mixup_gender import mixup_data_euc_avg_gender
+from mixup_gender import build_trainer, mixup_data_euc_avg_gender
 
 
 class GenderMixupTests(unittest.TestCase):
@@ -32,6 +33,31 @@ class GenderMixupTests(unittest.TestCase):
         self.assertEqual(mixed_labels.tolist(), [0, 0])
         self.assertEqual(tuple(mixed_weights.shape), (2, 1))
         self.assertTrue(torch.equal(mixed_embeddings, torch.tensor([[2.0, 0.0], [2.0, 0.0]])))
+
+    def test_training_checkpoint_monitors_lowest_cosine_eer(self):
+        with TemporaryDirectory() as save_dir:
+            trainer = build_trainer(
+                {
+                    "USE_WANDB": False,
+                    "epochs": 1,
+                    "save_dir": save_dir,
+                    "validate_during_train": True,
+                    "save_top_k": 2,
+                },
+                "train",
+            )
+
+        checkpoints = [
+            callback
+            for callback in trainer.callbacks
+            if callback.__class__.__name__ == "ModelCheckpoint"
+        ]
+
+        self.assertEqual(len(checkpoints), 1)
+        self.assertEqual(checkpoints[0].monitor, "cosine_eer")
+        self.assertEqual(checkpoints[0].mode, "min")
+        self.assertEqual(checkpoints[0].save_top_k, 2)
+        self.assertTrue(checkpoints[0].save_last)
 
 
 if __name__ == "__main__":

@@ -15,8 +15,8 @@ active_split: train
 USE_WANDB: true
 wandb_project: caarma-gender
 criterion: AMSoftmaxGAN
-init_lr: 0.001
-epochs: 20
+init_lr: 0.0003
+epochs: 30
 weight_decay: 0.0000001
 trial_path: data/vox1_test.txt
 root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
@@ -25,7 +25,7 @@ validation_split: val
 validation_trial_protocol: generated_cross_session
 validation_max_speakers: 300
 warmup_step: 2000
-batch_size: 50
+batch_size: 100
 num_workers: 4
 val_num_workers: 4
 train_drop_last: true
@@ -34,9 +34,12 @@ do_augmentation: false
 num_spk: 1211
 mixup: true
 sl_mixup: true
-discriminator: simple
-discriminator_hidden_dim: 256
-discriminator_dropout: 0.1
+discriminator: intermediate
+discriminator_hidden_dim: 512
+discriminator_mid_dim: 384
+discriminator_head_dim: 128
+discriminator_dropout: 0.15
+save_top_k: 3
 validate_during_train: true
 vox1_meta_path: vox1_meta.csv
 embedding_dim: 192

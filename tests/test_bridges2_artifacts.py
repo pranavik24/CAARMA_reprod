@@ -75,7 +75,6 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("init_lr: 0.0003", source)
         self.assertIn("epochs: 30", source)
         self.assertIn("batch_size: 100", source)
-        self.assertIn("accumulate_grad_batches: 2", source)
         self.assertIn("sl_mixup: true", source)
         self.assertIn("discriminator: intermediate", source)
         self.assertIn("discriminator_hidden_dim: 512", source)

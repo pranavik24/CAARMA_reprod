@@ -26,7 +26,6 @@ validation_trial_protocol: generated_cross_session
 validation_max_speakers: 300
 warmup_step: 2000
 batch_size: 100
-accumulate_grad_batches: 2
 num_workers: 4
 val_num_workers: 4
 train_drop_last: true

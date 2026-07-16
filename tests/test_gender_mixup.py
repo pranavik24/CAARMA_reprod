@@ -91,21 +91,6 @@ class GenderMixupTests(unittest.TestCase):
         self.assertEqual(task.lambda_adv_max, 0.05)
         self.assertEqual(task.lambda_adv_pretrain, 0.0005)
 
-    def test_trainer_uses_configured_gradient_accumulation(self):
-        with TemporaryDirectory() as save_dir:
-            trainer = build_trainer(
-                {
-                    "USE_WANDB": False,
-                    "epochs": 1,
-                    "save_dir": save_dir,
-                    "validate_during_train": True,
-                    "accumulate_grad_batches": 2,
-                },
-                "train",
-            )
-
-        self.assertEqual(trainer.accumulate_grad_batches, 2)
-
 
 if __name__ == "__main__":
     unittest.main()

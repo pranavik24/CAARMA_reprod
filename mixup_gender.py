@@ -951,7 +951,7 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
         default_root_dir=config["save_dir"],
         reload_dataloaders_every_n_epochs=1,
         limit_val_batches=1.0 if mode != "train" or _as_bool(config.get("validate_during_train", True)) else 0,
-        accumulate_grad_batches=int(config.get("accumulate_grad_batches", 1)),
+        accumulate_grad_batches=1,
         log_every_n_steps=25,
         benchmark=True,
         deterministic=False,

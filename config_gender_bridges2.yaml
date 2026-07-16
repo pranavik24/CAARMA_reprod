@@ -26,6 +26,7 @@ validation_trial_protocol: generated_cross_session
 validation_max_speakers: 300
 warmup_step: 2000
 batch_size: 100
+accumulate_grad_batches: 2
 num_workers: 4
 val_num_workers: 4
 train_drop_last: true
@@ -39,6 +40,13 @@ discriminator_hidden_dim: 512
 discriminator_mid_dim: 384
 discriminator_head_dim: 128
 discriminator_dropout: 0.15
+discriminator_lr: 0.0001
+lambda_adv: 0.02
+lambda_adv_min: 0.001
+lambda_adv_max: 0.05
+lambda_adv_pretrain: 0.0005
+pretrain_eps: 5
+log_training_steps: false
 save_top_k: 3
 validate_during_train: true
 vox1_meta_path: vox1_meta.csv

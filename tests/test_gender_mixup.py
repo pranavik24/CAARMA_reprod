@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 import torch
 
-from mixup_gender import build_trainer, mixup_data_euc_avg_gender
+from mixup_gender import Task, build_trainer, mixup_data_euc_avg_gender
 
 
 class GenderMixupTests(unittest.TestCase):
@@ -58,6 +58,53 @@ class GenderMixupTests(unittest.TestCase):
         self.assertEqual(checkpoints[0].mode, "min")
         self.assertEqual(checkpoints[0].save_top_k, 2)
         self.assertTrue(checkpoints[0].save_last)
+
+    def test_task_uses_configured_discriminator_lr_and_adv_bounds(self):
+        task = Task(
+            features=torch.nn.Identity(),
+            model=torch.nn.Linear(4, 4),
+            loss=torch.nn.Linear(4, 2),
+            config={
+                "discriminator": "simple",
+                "embedding_dim": 4,
+                "discriminator_hidden_dim": 8,
+                "discriminator_dropout": 0.0,
+                "_mode": "train",
+                "validate_during_train": False,
+                "discriminator_lr": 0.0001,
+                "lambda_adv": 0.02,
+                "lambda_adv_min": 0.001,
+                "lambda_adv_max": 0.05,
+                "lambda_adv_pretrain": 0.0005,
+                "log_training_steps": False,
+            },
+            learning_rate=0.0003,
+            trial_path="missing-trials.txt",
+        )
+
+        optimizers, _ = task.configure_optimizers()
+
+        self.assertEqual(optimizers[0].param_groups[0]["lr"], 0.0003)
+        self.assertEqual(optimizers[1].param_groups[0]["lr"], 0.0001)
+        self.assertEqual(task.lambda_adv, 0.02)
+        self.assertEqual(task.lambda_adv_min, 0.001)
+        self.assertEqual(task.lambda_adv_max, 0.05)
+        self.assertEqual(task.lambda_adv_pretrain, 0.0005)
+
+    def test_trainer_uses_configured_gradient_accumulation(self):
+        with TemporaryDirectory() as save_dir:
+            trainer = build_trainer(
+                {
+                    "USE_WANDB": False,
+                    "epochs": 1,
+                    "save_dir": save_dir,
+                    "validate_during_train": True,
+                    "accumulate_grad_batches": 2,
+                },
+                "train",
+            )
+
+        self.assertEqual(trainer.accumulate_grad_batches, 2)
 
 
 if __name__ == "__main__":

@@ -498,6 +498,14 @@ class Task(LightningModule):
         self.num_workers = num_workers
         self.max_epochs = max_epochs
         self.config = config
+        self.discriminator_learning_rate = float(
+            self.config.get("discriminator_lr", self.learning_rate * 0.01)
+        )
+        self.lambda_adv = float(self.config.get("lambda_adv", 0.01))
+        self.lambda_adv_min = float(self.config.get("lambda_adv_min", 0.0001))
+        self.lambda_adv_max = float(self.config.get("lambda_adv_max", 0.01))
+        self.lambda_adv_pretrain = float(self.config.get("lambda_adv_pretrain", 0.0005))
+        self.log_training_steps = _as_bool(self.config.get("log_training_steps", False))
         self.trials = None
         should_load_trials = (
             config.get("_mode") != "train"
@@ -514,7 +522,6 @@ class Task(LightningModule):
         self.discriminator = build_embedding_discriminator(self.config).train()
         self.BCE_loss = nn.BCEWithLogitsLoss()
 
-        self.lambda_adv = 0.25
         self.pretrain_eps = int(self.config.get("pretrain_eps", 15))
         self.pretrain_discriminator = True
         self.discriminator_steps = 0
@@ -535,9 +542,9 @@ class Task(LightningModule):
     def adjust_weight(self, amsoftmax_loss, g_loss):
         loss_ratio = amsoftmax_loss / (g_loss + 1e-8)
         if loss_ratio > 1.5:
-            self.lambda_adv = min(self.lambda_adv * 1.1, 0.01)
+            self.lambda_adv = min(self.lambda_adv * 1.1, self.lambda_adv_max)
         elif loss_ratio < 0.5:
-            self.lambda_adv = max(self.lambda_adv * 0.9, 0.0001)
+            self.lambda_adv = max(self.lambda_adv * 0.9, self.lambda_adv_min)
         return self.lambda_adv
 
     def training_step(self, batch, batch_idx):
@@ -561,7 +568,8 @@ class Task(LightningModule):
         if self.d_step_counter >= 1 and self.g_step_counter >= 5:
             self.d_step_counter = 0
             self.g_step_counter = 0
-            print("set 0 pre-training")
+            if self.log_training_steps:
+                print("set 0 pre-training")
         elif (
             self.d_step_counter >= 1
             and self.g_step_counter >= 1
@@ -569,11 +577,11 @@ class Task(LightningModule):
         ):
             self.d_step_counter = 0
             self.g_step_counter = 0
-            print("set 0 discriminator")
+            if self.log_training_steps:
+                print("set 0 discriminator")
 
         if self.current_epoch <= self.pretrain_eps:
             if self.g_step_counter < 5:
-                self.lambda_adv = 0.0005
                 optimizer_main.zero_grad()
                 self.set_discriminator_requires_grad(False)
                 real_preds = self.discriminator(self.normalize(embedding.detach()))
@@ -593,7 +601,7 @@ class Task(LightningModule):
                 total_loss = (
                     amsoftmax_loss
                     + (1 / self.config["num_spk"]) * amsoftmax_syn_loss
-                    + self.lambda_adv * g_loss
+                    + self.lambda_adv_pretrain * g_loss
                 )
                 self.manual_backward(total_loss)
                 self.log("am_loss", amsoftmax_loss, prog_bar=True)
@@ -610,7 +618,8 @@ class Task(LightningModule):
                     )
                     for pg in optimizer_main.param_groups:
                         pg["lr"] = lr_scale * self.learning_rate
-                print("gloss")
+                if self.log_training_steps:
+                    print("gloss")
                 self.g_step_counter += 1
                 self.set_discriminator_requires_grad(True)
                 return total_loss
@@ -630,7 +639,8 @@ class Task(LightningModule):
                 self.log("d_loss", d_loss, prog_bar=True)
                 d_optimizer.step()
                 self.d_step_counter += 1
-                print("d_loss")
+                if self.log_training_steps:
+                    print("d_loss")
                 return d_loss
 
         if self.d_step_counter < 1:
@@ -648,13 +658,13 @@ class Task(LightningModule):
             self.log("d_loss", d_loss, prog_bar=True)
             d_optimizer.step()
             self.d_step_counter += 1
-            print("d_loss")
+            if self.log_training_steps:
+                print("d_loss")
             return d_loss
 
         if self.d_step_counter >= 1 and self.g_step_counter < 1:
             optimizer_main.zero_grad()
             self.set_discriminator_requires_grad(False)
-            self.lambda_adv = 0.25
             real_preds = self.discriminator(self.normalize(embedding.detach()))
             fake_preds = self.discriminator(self.normalize(synthetic_embeddings))
             fake_labels = torch.zeros(real_preds.size(), device=self.device)
@@ -690,7 +700,8 @@ class Task(LightningModule):
                 )
                 for pg in optimizer_main.param_groups:
                     pg["lr"] = lr_scale * self.learning_rate
-            print("gloss")
+            if self.log_training_steps:
+                print("gloss")
             self.g_step_counter += 1
             self.set_discriminator_requires_grad(True)
             return total_loss
@@ -706,7 +717,7 @@ class Task(LightningModule):
         )
         discriminator_optimizer = AdamW(
             self.discriminator.parameters(),
-            lr=self.learning_rate * 0.01,
+            lr=self.discriminator_learning_rate,
             weight_decay=self.weight_decay,
             betas=(0.5, 0.999),
         )
@@ -940,7 +951,7 @@ def build_trainer(config: Dict[str, Any], mode: str) -> Trainer:
         default_root_dir=config["save_dir"],
         reload_dataloaders_every_n_epochs=1,
         limit_val_batches=1.0 if mode != "train" or _as_bool(config.get("validate_during_train", True)) else 0,
-        accumulate_grad_batches=1,
+        accumulate_grad_batches=int(config.get("accumulate_grad_batches", 1)),
         log_every_n_steps=25,
         benchmark=True,
         deterministic=False,

@@ -56,6 +56,18 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("srun", source)
         self.assertNotIn("#SBATCH --account=", source)
 
+    def test_base_diffusion_slurm_script_runs_base_entrypoint(self):
+        source = (ROOT / "bridges2" / "train_base_diffusion.sbatch").read_text()
+
+        self.assertIn("#SBATCH --job-name=caarma-base-diffusion", source)
+        self.assertIn("#SBATCH --output=caarma-base-diffusion-%j.out", source)
+        self.assertIn("#SBATCH --gpus=v100-32:1", source)
+        self.assertIn("configs/base_diffusion_bridges2.yaml", source)
+        self.assertIn("train.py", source)
+        self.assertIn("srun", source)
+        self.assertNotIn("--sl-mixup", source)
+        self.assertNotIn("#SBATCH --account=", source)
+
     def test_static_config_does_not_oversubscribe_one_gpu_cpu_allocation(self):
         source = (ROOT / "configs" / "nationality_bridges2.yaml").read_text()
 
@@ -69,6 +81,21 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("generate_validation_trials: true", source)
         self.assertIn("validation_split: val", source)
         self.assertIn("validate_during_train: true", source)
+
+    def test_base_diffusion_config_is_explicit(self):
+        source = (ROOT / "configs" / "base_diffusion_bridges2.yaml").read_text()
+
+        self.assertIn("Base diffusion-mixup config", source)
+        self.assertIn("synthetic_strategy: diffusion", source)
+        self.assertIn("diffusion_timesteps: 100", source)
+        self.assertIn("diffusion_t_min: 1", source)
+        self.assertIn("diffusion_t_max: 20", source)
+        self.assertIn("batch_size: 100", source)
+        self.assertIn("num_workers: 4", source)
+        self.assertIn("generate_validation_trials: true", source)
+        self.assertIn("validation_split: val", source)
+        self.assertIn("num_spk: 1211", source)
+        self.assertIn("save_dir: \"${PROJECT}/caarma-output/base-diffusion\"", source)
 
     def test_gender_config_uses_server_splits_and_intermediate_discriminator(self):
         source = (ROOT / "configs" / "gender_bridges2.yaml").read_text()

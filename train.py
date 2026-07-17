@@ -21,6 +21,7 @@ from torch.optim.lr_scheduler import StepLR, CyclicLR
 
 from feature.build_feature import build_feature
 from functions.loader import super_dataset
+from functions.voxceleb_split import load_validation_trials
 from criterion.build_criterion import build_criterion
 from model.model_build import build_model
 from model.discriminator_mix import Discriminator2
@@ -44,8 +45,9 @@ class Task(LightningModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.max_epochs = max_epochs
-        self.trials = np.loadtxt(trial_path, str)
         self.config = config
+        self.trials, validation_root = load_validation_trials(self.config)
+        self.config["root"] = validation_root
         self.automatic_optimization = False
         
         embedding_dim = self.config['embedding_dim']
@@ -463,13 +465,14 @@ def cli_main():
     else:
         config["checkpoint_path"] = resolve_path(config["checkpoint_path"], config_dir)
 
-    if not os.path.exists(config["trial_path"]):
+    if not os.path.exists(config["trial_path"]) and not as_bool(config.get("generate_validation_trials", False)):
         raise FileNotFoundError(
             f"Trial file not found: {config['trial_path']}. "
             "Set trial_path in configs/base.yaml or pass --trial-path /path/to/vox1_test.txt."
         )
 
-    config["root"] = resolve_eval_root(config, config_dir)
+    if os.path.exists(config["trial_path"]):
+        config["root"] = resolve_eval_root(config, config_dir)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Device: ", device)

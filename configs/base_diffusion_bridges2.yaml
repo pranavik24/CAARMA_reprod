@@ -1,0 +1,51 @@
+# Base diffusion-mixup config for Bridges-2 (`train.py`).
+model: "MFA-CONFORMER" #"ECAPA" #"MFA-CONFORMER" #ECAPA, MFA-CONFORMER, RAWNET3, SKA_TDNN, ECAPA-LARGE etc. (Add)
+features: "FBank_New" #FBank, MFCC SpeechTokenizer, FBank_New, waveform, featNone
+augmentations: {
+  add_noise: False,
+  add_reverb: False,
+  drop_freq: False,
+  drop_chunk: False,
+
+}
+dataset: null
+vox1_wav_root: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav"
+vox1_split_dir: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data"
+train_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_train.csv"
+val_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv"
+test_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv"
+active_split: "train"
+USE_WANDB: True
+criterion: 'AMSoftmaxGAN' #'AMSoftmaxGAN' #'AMSoftmaxGAN' #'Softmax' #'AMSoftmax'
+init_lr: 0.001
+epochs: 30
+weight_decay: 0.0000001
+trial_path: "./data/vox1_test.txt"
+root: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav"
+generate_validation_trials: true
+validation_split: val
+validation_trial_protocol: generated_cross_session
+validation_max_speakers: 300
+warmup_step: 2000
+batch_size: 100
+num_workers: 4
+val_num_workers: 4
+train_drop_last: true
+second: 3
+do_augmentation: False
+num_spk: 1211
+mixup: True
+synthetic_strategy: diffusion
+diffusion_timesteps: 100
+diffusion_t_min: 1
+diffusion_t_max: 20
+diffusion_beta_start: 0.0001
+diffusion_beta_end: 0.02
+diffusion_embedding_noise: 0.0
+embedding_dim: 192
+checkpoint_path: "None"
+save_dir: "${PROJECT}/caarma-output/base-diffusion"
+title: "caarma_base_diffusion"
+
+
+# ECAPA-LARGE WAS USED

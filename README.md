@@ -47,6 +47,7 @@ caarma/
 │   └── build_model.py
 ├── configs/                  # YAML configs grouped by purpose
 │   ├── base.yaml             # Original clean CAARMA training config
+│   ├── base_diffusion_bridges2.yaml # Base diffusion-mixup Bridges-2 config
 │   ├── gender_bridges2.yaml  # Gender diffusion-mixup Bridges-2 config
 │   └── nationality_bridges2.yaml # Nationality mixup Bridges-2 config
 ├── train.py                # Training script
@@ -73,6 +74,7 @@ For Bridges-2 runs, use the role-specific configs:
 ```bash
 python mixup_gender.py --config configs/gender_bridges2.yaml --mode train --sl-mixup
 python mixup_nationality.py --config configs/nationality_bridges2.yaml --mode train --nationality-mixup
+python train.py --config configs/base_diffusion_bridges2.yaml
 ```
 
 ---

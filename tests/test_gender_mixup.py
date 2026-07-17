@@ -3,10 +3,65 @@ from tempfile import TemporaryDirectory
 
 import torch
 
-from mixup_gender import Task, build_trainer, mixup_data_euc_avg_gender
+from mixup_gender import (
+    AMSoftmaxGANGender,
+    Task,
+    build_gender_criterion,
+    build_trainer,
+    diffusion_mixup,
+    mixup_data_euc_avg_gender,
+)
 
 
 class GenderMixupTests(unittest.TestCase):
+    def test_diffusion_mixup_shapes_labels_and_finite_weights(self):
+        embeddings = torch.randn(3, 4)
+        weights = torch.randn(4, 5)
+        labels = torch.tensor([0, 2, 4])
+
+        synthetic_embeddings, synthetic_labels, synthetic_weights = diffusion_mixup(
+            embeddings,
+            weights,
+            labels,
+            diffusion_timesteps=100,
+            diffusion_t_min=1,
+            diffusion_t_max=20,
+            diffusion_beta_start=0.0001,
+            diffusion_beta_end=0.02,
+            diffusion_embedding_noise=0.0,
+        )
+
+        self.assertEqual(tuple(synthetic_embeddings.shape), (3, 4))
+        self.assertEqual(synthetic_labels.tolist(), [0, 1, 2])
+        self.assertEqual(tuple(synthetic_weights.shape), (4, 3))
+        self.assertTrue(torch.isfinite(synthetic_weights).all())
+        self.assertTrue(torch.all(torch.norm(synthetic_weights, p=2, dim=0) > 0))
+
+    def test_zero_timestep_diffusion_reproduces_normalized_speaker_weights(self):
+        embeddings = torch.randn(2, 3)
+        weights = torch.tensor(
+            [
+                [3.0, 0.0, 4.0],
+                [4.0, 2.0, 0.0],
+                [0.0, 0.0, 3.0],
+            ]
+        )
+        labels = torch.tensor([0, 2])
+
+        _, synthetic_labels, synthetic_weights = diffusion_mixup(
+            embeddings,
+            weights,
+            labels,
+            diffusion_timesteps=100,
+            diffusion_t_min=0,
+            diffusion_t_max=0,
+        )
+
+        expected = weights.index_select(1, labels)
+        expected = expected / torch.norm(expected, p=2, dim=0, keepdim=True).clamp(min=1e-12)
+        self.assertEqual(synthetic_labels.tolist(), [0, 1])
+        self.assertTrue(torch.allclose(synthetic_weights, expected, atol=1e-6))
+
     def test_symmetric_gender_pair_uses_one_synthetic_class(self):
         embeddings = torch.tensor(
             [
@@ -33,6 +88,53 @@ class GenderMixupTests(unittest.TestCase):
         self.assertEqual(mixed_labels.tolist(), [0, 0])
         self.assertEqual(tuple(mixed_weights.shape), (2, 1))
         self.assertTrue(torch.equal(mixed_embeddings, torch.tensor([[2.0, 0.0], [2.0, 0.0]])))
+
+    def test_diffusion_strategy_flag_syn_produces_scalar_loss(self):
+        criterion = AMSoftmaxGANGender(
+            embedding_dim=4,
+            num_classes=5,
+            synthetic_strategy="diffusion",
+            diffusion_t_min=0,
+            diffusion_t_max=0,
+        )
+        embeddings = torch.randn(3, 4)
+        labels = torch.tensor([0, 2, 4])
+
+        loss, acc, synthetic_embeddings = criterion(embeddings, labels, flagSyn=True)
+
+        self.assertEqual(tuple(loss.shape), ())
+        self.assertEqual(tuple(acc.shape), ())
+        self.assertEqual(tuple(synthetic_embeddings.shape), (3, 4))
+
+    def test_default_strategy_still_uses_average_mixup(self):
+        criterion = AMSoftmaxGANGender(
+            embedding_dim=2,
+            num_classes=2,
+            sl_mixup=False,
+        )
+        with torch.no_grad():
+            criterion.W.copy_(torch.tensor([[1.0, 3.0], [0.0, 0.0]]))
+        embeddings = torch.tensor([[1.0, 0.0], [3.0, 0.0]])
+        labels = torch.tensor([0, 1])
+
+        _, _, synthetic_embeddings = criterion(embeddings, labels, flagSyn=False)
+
+        self.assertTrue(torch.equal(synthetic_embeddings, torch.tensor([[2.0, 0.0], [2.0, 0.0]])))
+
+    def test_diffusion_strategy_does_not_require_gender_metadata(self):
+        criterion = build_gender_criterion(
+            {
+                "criterion": "AMSoftmaxGAN",
+                "embedding_dim": 4,
+                "num_spk": 5,
+                "_mode": "train",
+                "sl_mixup": True,
+                "synthetic_strategy": "diffusion",
+                "dataset": "missing-train.csv",
+            }
+        )
+
+        self.assertEqual(criterion.synthetic_strategy, "diffusion")
 
     def test_training_checkpoint_monitors_lowest_cosine_eer(self):
         with TemporaryDirectory() as save_dir:

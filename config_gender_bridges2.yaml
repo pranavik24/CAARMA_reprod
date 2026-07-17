@@ -34,6 +34,13 @@ do_augmentation: false
 num_spk: 1211
 mixup: true
 sl_mixup: true
+synthetic_strategy: diffusion
+diffusion_timesteps: 100
+diffusion_t_min: 1
+diffusion_t_max: 20
+diffusion_beta_start: 0.0001
+diffusion_beta_end: 0.02
+diffusion_embedding_noise: 0.0
 discriminator: intermediate
 discriminator_hidden_dim: 512
 discriminator_mid_dim: 384

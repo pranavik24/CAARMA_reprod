@@ -287,6 +287,71 @@ def mixup_data_euc_avg_gender(
     return x_mix, y_mix, w_mix[:, :next_synthetic_label].to(device)
 
 
+def diffusion_mixup(
+    x: torch.Tensor,
+    weights: torch.Tensor,
+    labels: torch.Tensor,
+    diffusion_timesteps: int = 100,
+    diffusion_t_min: int = 1,
+    diffusion_t_max: int = 20,
+    diffusion_beta_start: float = 0.0001,
+    diffusion_beta_end: float = 0.02,
+    diffusion_embedding_noise: float = 0.0,
+):
+    """Create non-conditional diffusion-style extensions of speaker weights."""
+    if diffusion_timesteps <= 0:
+        raise ValueError("diffusion_timesteps must be positive")
+    if diffusion_t_min < 0 or diffusion_t_max < diffusion_t_min:
+        raise ValueError("diffusion timestep range is invalid")
+    if diffusion_t_max >= diffusion_timesteps:
+        raise ValueError("diffusion_t_max must be smaller than diffusion_timesteps")
+
+    batch_size = x.size(0)
+    device = x.device
+    dtype = x.dtype
+    labels_for_weights = labels.to(device=weights.device, dtype=torch.long)
+    selected_weights = weights.index_select(1, labels_for_weights).to(device=device, dtype=dtype)
+
+    betas = torch.linspace(
+        diffusion_beta_start,
+        diffusion_beta_end,
+        diffusion_timesteps,
+        device=device,
+        dtype=dtype,
+    )
+    alphas = 1.0 - betas
+    alpha_bar_tail = torch.cumprod(alphas, dim=0)
+    alpha_bars = torch.cat((torch.ones(1, device=device, dtype=dtype), alpha_bar_tail[:-1]))
+
+    timesteps = torch.randint(
+        diffusion_t_min,
+        diffusion_t_max + 1,
+        (batch_size,),
+        device=device,
+        dtype=torch.long,
+    )
+    alpha_bar_t = alpha_bars.index_select(0, timesteps).view(1, batch_size)
+    epsilon = torch.randn_like(selected_weights)
+    synthetic_weights = (
+        torch.sqrt(alpha_bar_t) * selected_weights
+        + torch.sqrt(1.0 - alpha_bar_t) * epsilon
+    )
+    synthetic_weights = synthetic_weights / torch.norm(
+        synthetic_weights,
+        p=2,
+        dim=0,
+        keepdim=True,
+    ).clamp(min=1e-12)
+
+    if diffusion_embedding_noise > 0:
+        synthetic_embeddings = x + diffusion_embedding_noise * torch.randn_like(x)
+    else:
+        synthetic_embeddings = x
+
+    synthetic_labels = torch.arange(batch_size, dtype=torch.long, device=device)
+    return synthetic_embeddings, synthetic_labels, synthetic_weights
+
+
 class AMSoftmaxGANGender(nn.Module):
     def __init__(
         self,
@@ -296,6 +361,13 @@ class AMSoftmaxGANGender(nn.Module):
         scale: float = 30,
         label_to_gender: Optional[Dict[int, str]] = None,
         sl_mixup: bool = False,
+        synthetic_strategy: str = "avg",
+        diffusion_timesteps: int = 100,
+        diffusion_t_min: int = 1,
+        diffusion_t_max: int = 20,
+        diffusion_beta_start: float = 0.0001,
+        diffusion_beta_end: float = 0.02,
+        diffusion_embedding_noise: float = 0.0,
         **kwargs: Any,
     ):
         super().__init__()
@@ -304,6 +376,13 @@ class AMSoftmaxGANGender(nn.Module):
         self.in_feats = embedding_dim
         self.sl_mixup = sl_mixup
         self.label_to_gender = label_to_gender or {}
+        self.synthetic_strategy = str(synthetic_strategy).strip().lower()
+        self.diffusion_timesteps = diffusion_timesteps
+        self.diffusion_t_min = diffusion_t_min
+        self.diffusion_t_max = diffusion_t_max
+        self.diffusion_beta_start = diffusion_beta_start
+        self.diffusion_beta_end = diffusion_beta_end
+        self.diffusion_embedding_noise = diffusion_embedding_noise
         self.W = nn.Parameter(torch.randn(embedding_dim, num_classes), requires_grad=True)
         self.ce = nn.CrossEntropyLoss()
         nn.init.xavier_normal_(self.W, gain=1)
@@ -312,19 +391,38 @@ class AMSoftmaxGANGender(nn.Module):
         print(f"Embedding dim is {embedding_dim}, number of speakers is {num_classes}")
         if self.sl_mixup:
             print(f"Gender-aware sl_mixup enabled for {len(self.label_to_gender)} labels")
+        if self.synthetic_strategy == "diffusion":
+            print(
+                "Diffusion mixup enabled: "
+                f"timesteps={self.diffusion_timesteps}, "
+                f"t=[{self.diffusion_t_min}, {self.diffusion_t_max}]"
+            )
 
     def forward(self, x: torch.Tensor, label: torch.Tensor = None, flagSyn: bool = False):
         assert label is not None
         assert x.size(0) == label.size(0)
         assert x.size(1) == self.in_feats
 
-        synthetic_embeddings, y_combined, w_combined = mixup_data_euc_avg_gender(
-            x,
-            self.W,
-            label,
-            label_to_gender=self.label_to_gender,
-            sl_mixup=self.sl_mixup,
-        )
+        if self.synthetic_strategy == "diffusion":
+            synthetic_embeddings, y_combined, w_combined = diffusion_mixup(
+                x,
+                self.W,
+                label,
+                diffusion_timesteps=self.diffusion_timesteps,
+                diffusion_t_min=self.diffusion_t_min,
+                diffusion_t_max=self.diffusion_t_max,
+                diffusion_beta_start=self.diffusion_beta_start,
+                diffusion_beta_end=self.diffusion_beta_end,
+                diffusion_embedding_noise=self.diffusion_embedding_noise,
+            )
+        else:
+            synthetic_embeddings, y_combined, w_combined = mixup_data_euc_avg_gender(
+                x,
+                self.W,
+                label,
+                label_to_gender=self.label_to_gender,
+                sl_mixup=self.sl_mixup,
+            )
 
         if flagSyn:
             x_for_loss = synthetic_embeddings.to(x.device)
@@ -354,9 +452,11 @@ def build_gender_criterion(config: Dict[str, Any]) -> nn.Module:
             "mixup_gender.py currently implements gender-aware mixup for AMSoftmaxGAN only."
         )
 
+    synthetic_strategy = str(config.get("synthetic_strategy", "avg")).strip().lower()
     sl_mixup = _as_bool(config.get("sl_mixup", True))
+    uses_gender_mixup = sl_mixup and synthetic_strategy != "diffusion"
     label_to_gender = {}
-    if sl_mixup:
+    if uses_gender_mixup:
         try:
             label_to_gender = build_label_metadata_map(config, "gender")
             if not label_to_gender:
@@ -383,7 +483,14 @@ def build_gender_criterion(config: Dict[str, Any]) -> nn.Module:
         margin=float(config.get("margin", 0.2)),
         scale=float(config.get("scale", 30)),
         label_to_gender=label_to_gender,
-        sl_mixup=sl_mixup,
+        sl_mixup=uses_gender_mixup,
+        synthetic_strategy=synthetic_strategy,
+        diffusion_timesteps=int(config.get("diffusion_timesteps", 100)),
+        diffusion_t_min=int(config.get("diffusion_t_min", 1)),
+        diffusion_t_max=int(config.get("diffusion_t_max", 20)),
+        diffusion_beta_start=float(config.get("diffusion_beta_start", 0.0001)),
+        diffusion_beta_end=float(config.get("diffusion_beta_end", 0.02)),
+        diffusion_embedding_noise=float(config.get("diffusion_embedding_noise", 0.0)),
     )
 
 

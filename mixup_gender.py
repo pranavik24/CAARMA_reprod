@@ -1095,7 +1095,7 @@ def build_task(config: Dict[str, Any], device: str) -> Task:
 
 def parse_args():
     parser = ArgumentParser(description="CAARMA training/testing with gender-aware sl_mixup")
-    parser.add_argument("--config", default="config.yaml", help="Path to config YAML")
+    parser.add_argument("--config", default="configs/gender_bridges2.yaml", help="Path to config YAML")
     parser.add_argument(
         "--mode",
         choices=("train", "validate", "test"),

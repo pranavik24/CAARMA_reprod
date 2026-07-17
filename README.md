@@ -45,7 +45,10 @@ caarma/
 │   ├── ska_tdnn.py
 │   ├── discriminator_mix.py
 │   └── build_model.py
-├── config.yaml               # YAML configs
+├── configs/                  # YAML configs grouped by purpose
+│   ├── base.yaml             # Original clean CAARMA training config
+│   ├── gender_bridges2.yaml  # Gender diffusion-mixup Bridges-2 config
+│   └── nationality_bridges2.yaml # Nationality mixup Bridges-2 config
 ├── train.py                # Training script
 ├── requirements.txt       # Python dependencies
 └── README.md
@@ -57,13 +60,20 @@ caarma/
 
 
 ```bash
-python train.py 
+python train.py --config configs/base.yaml
 ```
 
-Inside `config.yaml`, make sure to:
+Inside the selected config file, make sure to:
 - Set the correct path to your **root**
 - Set the correct path to your **trial_path**
 - Set the correct path to your **dataset csv file**
+
+For Bridges-2 runs, use the role-specific configs:
+
+```bash
+python mixup_gender.py --config configs/gender_bridges2.yaml --mode train --sl-mixup
+python mixup_nationality.py --config configs/nationality_bridges2.yaml --mode train --nationality-mixup
+```
 
 ---
 ## 📌 Citation

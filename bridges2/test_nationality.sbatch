@@ -14,7 +14,7 @@ set -euo pipefail
 : "${CAARMA_CHECKPOINT:?Set CAARMA_CHECKPOINT to the checkpoint .ckpt to evaluate}"
 
 REPO_ROOT="${CAARMA_REPO_ROOT:-${PROJECT}/CAARMA_reprod}"
-CONFIG_PATH="${CAARMA_CONFIG:-${REPO_ROOT}/config_nationality_bridges2.yaml}"
+CONFIG_PATH="${CAARMA_CONFIG:-${REPO_ROOT}/configs/nationality_bridges2.yaml}"
 ENV_ROOT="${HOME}/.venvs/caarma"
 TEST_SPLIT="${CAARMA_TEST_SPLIT:-test}"
 SCORE_PREFIX="${CAARMA_SCORE_PREFIX:-caarma_nationality_${TEST_SPLIT}}"

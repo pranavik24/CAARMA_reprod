@@ -28,6 +28,7 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("conda.sh", source)
         self.assertIn("srun", source)
         self.assertIn("mixup_nationality.py", source)
+        self.assertIn("configs/nationality_bridges2.yaml", source)
         self.assertNotIn("#SBATCH --account=", source)
 
     def test_test_slurm_script_runs_nationality_test_mode(self):
@@ -49,15 +50,17 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("#SBATCH --mem=62000M", source)
         self.assertIn("conda.sh", source)
         self.assertIn("mixup_gender.py", source)
+        self.assertIn("configs/gender_bridges2.yaml", source)
         self.assertIn("--mode train", source)
         self.assertIn("--sl-mixup", source)
         self.assertIn("srun", source)
         self.assertNotIn("#SBATCH --account=", source)
 
     def test_static_config_does_not_oversubscribe_one_gpu_cpu_allocation(self):
-        source = (ROOT / "config_nationality_bridges2.yaml").read_text()
+        source = (ROOT / "configs" / "nationality_bridges2.yaml").read_text()
 
         self.assertIn("epochs: 20", source)
+        self.assertIn("Nationality mixup config", source)
         self.assertIn("num_workers: 4", source)
         self.assertIn("val_num_workers: 4", source)
         self.assertIn("train_drop_last: true", source)
@@ -68,9 +71,10 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("validate_during_train: true", source)
 
     def test_gender_config_uses_server_splits_and_intermediate_discriminator(self):
-        source = (ROOT / "config_gender_bridges2.yaml").read_text()
+        source = (ROOT / "configs" / "gender_bridges2.yaml").read_text()
 
         self.assertIn("USE_WANDB: true", source)
+        self.assertIn("Gender diffusion-mixup config", source)
         self.assertIn("wandb_project: caarma-gender", source)
         self.assertIn("init_lr: 0.0003", source)
         self.assertIn("epochs: 30", source)

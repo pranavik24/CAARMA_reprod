@@ -13,7 +13,7 @@ set -euo pipefail
 : "${AI_MODULE:?Set AI_MODULE to the current PSC module reported by 'module spider AI'}"
 
 REPO_ROOT="${CAARMA_REPO_ROOT:-${PROJECT}/CAARMA_reprod}"
-CONFIG_PATH="${CAARMA_CONFIG:-${REPO_ROOT}/config_nationality_bridges2.yaml}"
+CONFIG_PATH="${CAARMA_CONFIG:-${REPO_ROOT}/configs/nationality_bridges2.yaml}"
 ENV_ROOT="${HOME}/.venvs/caarma"
 
 for conda_hook in \

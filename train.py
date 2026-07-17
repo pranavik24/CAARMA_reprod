@@ -432,11 +432,11 @@ def cli_main():
         raise FileNotFoundError(
             f"Validation audio not found: {missing_path}. "
             "The trial file is correct, but root must point to the VoxCeleb1 test wav directory. "
-            "Pass --root /content/voxceleb1_test/wav or update root in config.yaml."
+            "Pass --root /content/voxceleb1_test/wav or update root in configs/base.yaml."
         )
 
     parser = ArgumentParser(description="Train CAARMA regular mixup")
-    parser.add_argument("--config", default="config.yaml", help="Path to config YAML")
+    parser.add_argument("--config", default="configs/base.yaml", help="Path to config YAML")
     parser.add_argument("--checkpoint-path", default=None, help="Optional checkpoint override")
     parser.add_argument("--trial-path", default=None, help="Optional trial file override")
     parser.add_argument("--root", default=None, help="Optional VoxCeleb1 test wav root override")
@@ -466,7 +466,7 @@ def cli_main():
     if not os.path.exists(config["trial_path"]):
         raise FileNotFoundError(
             f"Trial file not found: {config['trial_path']}. "
-            "Set trial_path in config.yaml or pass --trial-path /path/to/vox1_test.txt."
+            "Set trial_path in configs/base.yaml or pass --trial-path /path/to/vox1_test.txt."
         )
 
     config["root"] = resolve_eval_root(config, config_dir)

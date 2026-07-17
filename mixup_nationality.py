@@ -295,7 +295,7 @@ def build_task(config: Dict[str, Any], device: str) -> Task:
 
 def parse_args():
     parser = ArgumentParser(description="CAARMA training/testing with nationality-conditioned mixup")
-    parser.add_argument("--config", default="config_nationality.yaml", help="Path to config YAML")
+    parser.add_argument("--config", default="configs/nationality_bridges2.yaml", help="Path to config YAML")
     parser.add_argument("--mode", choices=("train", "validate", "test"), default="train")
     parser.add_argument("--checkpoint-path", default=None)
     parser.add_argument("--trial-path", default=None)

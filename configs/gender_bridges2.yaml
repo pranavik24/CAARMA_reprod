@@ -1,3 +1,4 @@
+# Gender diffusion-mixup config for Bridges-2 (`mixup_gender.py`).
 model: MFA-CONFORMER
 features: FBank_New
 augmentations:
@@ -13,10 +14,10 @@ val_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_va
 test_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv
 active_split: train
 USE_WANDB: true
-wandb_project: caarma-nationality
+wandb_project: caarma-gender
 criterion: AMSoftmaxGAN
-init_lr: 0.001
-epochs: 20
+init_lr: 0.0003
+epochs: 30
 weight_decay: 0.0000001
 trial_path: data/vox1_test.txt
 root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
@@ -25,7 +26,7 @@ validation_split: val
 validation_trial_protocol: generated_cross_session
 validation_max_speakers: 300
 warmup_step: 2000
-batch_size: 50
+batch_size: 100
 num_workers: 4
 val_num_workers: 4
 train_drop_last: true
@@ -33,15 +34,32 @@ second: 3
 do_augmentation: false
 num_spk: 1211
 mixup: true
-nationality_mixup: true
-discriminator: simple
-discriminator_hidden_dim: 256
-discriminator_dropout: 0.1
+sl_mixup: true
+synthetic_strategy: diffusion
+diffusion_timesteps: 100
+diffusion_t_min: 1
+diffusion_t_max: 20
+diffusion_beta_start: 0.0001
+diffusion_beta_end: 0.02
+diffusion_embedding_noise: 0.0
+discriminator: intermediate
+discriminator_hidden_dim: 512
+discriminator_mid_dim: 384
+discriminator_head_dim: 128
+discriminator_dropout: 0.15
+discriminator_lr: 0.0001
+lambda_adv: 0.02
+lambda_adv_min: 0.001
+lambda_adv_max: 0.05
+lambda_adv_pretrain: 0.0005
+pretrain_eps: 5
+log_training_steps: false
+save_top_k: 3
 validate_during_train: true
 vox1_meta_path: vox1_meta.csv
 embedding_dim: 192
 checkpoint_path: null
-save_dir: ${PROJECT}/caarma-output/nationality
-title: caarma_nationality
-score_output_prefix: caarma_nationality
+save_dir: ${PROJECT}/caarma-output/gender
+title: caarma_gender
+score_output_prefix: caarma_gender
 devices: 1

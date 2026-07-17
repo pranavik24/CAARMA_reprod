@@ -1,3 +1,4 @@
+# Base CAARMA config for the original clean training entrypoint (`train.py`).
 model: "MFA-CONFORMER" #"ECAPA" #"MFA-CONFORMER" #ECAPA, MFA-CONFORMER, RAWNET3, SKA_TDNN, ECAPA-LARGE etc. (Add)
 features: "FBank_New" #FBank, MFCC SpeechTokenizer, FBank_New, waveform, featNone
 augmentations: {

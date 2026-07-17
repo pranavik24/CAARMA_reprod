@@ -5,7 +5,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=62000M
-#SBATCH --output=caarma-gender-%j.out
+#SBATCH --output=caarma-diffusion-%j.out
 
 set -euo pipefail
 

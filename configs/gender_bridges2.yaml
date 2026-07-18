@@ -24,7 +24,7 @@ root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
 generate_validation_trials: true
 validation_split: val
 validation_trial_protocol: generated_cross_session
-validation_max_speakers: 300
+validation_max_speakers: 1000
 warmup_step: 2000
 batch_size: 100
 num_workers: 4
@@ -32,16 +32,16 @@ val_num_workers: 4
 train_drop_last: true
 second: 3
 do_augmentation: false
-num_spk: 1211
+num_spk: 942
 mixup: true
 sl_mixup: true
 synthetic_strategy: diffusion
 diffusion_timesteps: 100
 diffusion_t_min: 1
-diffusion_t_max: 20
+diffusion_t_max: 5
 diffusion_beta_start: 0.0001
 diffusion_beta_end: 0.02
-diffusion_embedding_noise: 0.0
+diffusion_embedding_noise: 0.005
 discriminator: intermediate
 discriminator_hidden_dim: 512
 discriminator_mid_dim: 384
@@ -52,6 +52,7 @@ lambda_adv: 0.02
 lambda_adv_min: 0.001
 lambda_adv_max: 0.05
 lambda_adv_pretrain: 0.0005
+lambda_syn: 0.05
 pretrain_eps: 5
 log_training_steps: false
 save_top_k: 3

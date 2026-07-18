@@ -86,6 +86,10 @@ def prepare_config(config: Dict[str, Any], config_path: Path, args: Any) -> Dict
         config["trial_path"] = args.trial_path
     if args.root is not None:
         config["root"] = args.root
+    if args.validation_split is not None:
+        config["validation_split"] = args.validation_split
+    if args.score_output_prefix is not None:
+        config["score_output_prefix"] = args.score_output_prefix
 
     for key in ("dataset", "trial_path", "checkpoint_path", "vox1_meta_path", "save_dir"):
         if key in config:
@@ -548,6 +552,8 @@ class Task(LightningModule):
         self.lambda_adv_min = float(self.config.get("lambda_adv_min", 0.0001))
         self.lambda_adv_max = float(self.config.get("lambda_adv_max", 0.01))
         self.lambda_adv_pretrain = float(self.config.get("lambda_adv_pretrain", 0.0005))
+        default_lambda_syn = 1.0 / max(int(self.config.get("num_spk", 1)), 1)
+        self.lambda_syn = float(self.config.get("lambda_syn", default_lambda_syn))
         self.log_training_steps = _as_bool(self.config.get("log_training_steps", False))
         self.trials = None
         should_load_trials = (
@@ -643,7 +649,7 @@ class Task(LightningModule):
                 )
                 total_loss = (
                     amsoftmax_loss
-                    + (1 / self.config["num_spk"]) * amsoftmax_syn_loss
+                    + self.lambda_syn * amsoftmax_syn_loss
                     + self.lambda_adv_pretrain * g_loss
                 )
                 self.manual_backward(total_loss)
@@ -726,7 +732,7 @@ class Task(LightningModule):
             self.lambda_adv = self.adjust_weight(amsoftmax_loss, g_loss)
             total_loss = (
                 amsoftmax_loss
-                + (1 / self.config["num_spk"]) * amsoftmax_syn_loss
+                + self.lambda_syn * amsoftmax_syn_loss
                 + self.lambda_adv * g_loss
             )
             self.manual_backward(total_loss)
@@ -1041,6 +1047,8 @@ def parse_args():
     parser.add_argument("--checkpoint-path", default=None)
     parser.add_argument("--trial-path", default=None)
     parser.add_argument("--root", default=None)
+    parser.add_argument("--validation-split", choices=("train", "val", "test"), default=None)
+    parser.add_argument("--score-output-prefix", default=None)
     parser.add_argument("--vox1-meta-path", default=None)
     parser.add_argument("--sl-mixup", dest="sl_mixup", action="store_true", default=None)
     parser.add_argument("--no-sl-mixup", dest="sl_mixup", action="store_false")
@@ -1069,6 +1077,7 @@ def cli_main():
             trial_path=config["trial_path"],
             root=config["root"],
             num_workers=min(int(config.get("num_workers", 10)), 10),
+            config=config,
         )
         trainer.test(final_project, datamodule=test_dm)
 

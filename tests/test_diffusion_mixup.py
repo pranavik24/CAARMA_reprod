@@ -56,6 +56,23 @@ class DiffusionMixupTests(unittest.TestCase):
         self.assertEqual(synthetic_labels.tolist(), [0, 1])
         self.assertTrue(torch.allclose(synthetic_weights, expected, atol=1e-6))
 
+    def test_repeated_speakers_share_one_synthetic_class(self):
+        embeddings = torch.randn(3, 4)
+        weights = torch.randn(4, 6)
+        labels = torch.tensor([2, 2, 4])
+
+        _, synthetic_labels, synthetic_weights = diffusion_mixup(
+            embeddings,
+            weights,
+            labels,
+            diffusion_timesteps=100,
+            diffusion_t_min=0,
+            diffusion_t_max=0,
+        )
+
+        self.assertEqual(synthetic_labels.tolist(), [0, 0, 1])
+        self.assertEqual(tuple(synthetic_weights.shape), (4, 2))
+
     def test_base_amsoftmax_gan_supports_diffusion_strategy(self):
         criterion = amsoftmax_gan(
             embedding_dim=4,

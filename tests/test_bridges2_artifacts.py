@@ -93,6 +93,19 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertNotIn("--sl-mixup", source)
         self.assertNotIn("#SBATCH --account=", source)
 
+    def test_training_slurm_scripts_source_body_from_repo_root(self):
+        for script_name in (
+            "run_experiment.sbatch",
+            "train_base_diffusion.sbatch",
+            "train_gender.sbatch",
+            "train_nationality.sbatch",
+        ):
+            with self.subTest(script_name=script_name):
+                source = (ROOT / "bridges2" / script_name).read_text()
+
+                self.assertIn('source "${REPO_ROOT}/bridges2/run_experiment_body.sh"', source)
+                self.assertNotIn("BASH_SOURCE", source)
+
     def test_nationality_config_is_explicit(self):
         source = (ROOT / "configs" / "nationality_mixup_bridges2.yaml").read_text()
 

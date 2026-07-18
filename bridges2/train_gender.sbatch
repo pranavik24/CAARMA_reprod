@@ -12,5 +12,4 @@ REPO_ROOT="${CAARMA_REPO_ROOT:-${PROJECT}/CAARMA_reprod}"
 export CAARMA_CONFIG="${CAARMA_CONFIG:-${REPO_ROOT}/configs/gender_mixup_bridges2.yaml}"
 export CAARMA_ENTRYPOINT="${CAARMA_ENTRYPOINT:-train.py}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/run_experiment_body.sh"
+source "${REPO_ROOT}/bridges2/run_experiment_body.sh"

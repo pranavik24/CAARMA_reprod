@@ -7,5 +7,7 @@
 #SBATCH --mem=62000M
 #SBATCH --output=caarma-experiment-%j.out
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/run_experiment_body.sh"
+: "${PROJECT:?PROJECT is not set; select the correct Bridges-2 allocation before submitting}"
+REPO_ROOT="${CAARMA_REPO_ROOT:-${PROJECT}/CAARMA_reprod}"
+
+source "${REPO_ROOT}/bridges2/run_experiment_body.sh"

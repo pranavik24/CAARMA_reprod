@@ -1,4 +1,4 @@
-# Running nationality-conditioned CAARMA on Bridges-2
+# Running modular CAARMA experiments on Bridges-2
 
 Keep the repository, environment, datasets, and checkpoints under the persistent
 `$PROJECT` filesystem. Keep the executable virtual environment in your private
@@ -45,18 +45,27 @@ different split.
 ## 3. Run
 
 For an interactive run, open an Open OnDemand Jupyter session with a GPU and run
-`CAARMA_nationality_bridges2.ipynb` from the repository root.
+the selected config through `train.py` from the repository root.
 
 For a detached run:
 
 ```bash
 export CAARMA_REPO_ROOT="$PROJECT/CAARMA_reprod"
 export AI_MODULE=<module-name-reported-by-PSC>
-sbatch -A <your-allocation> bridges2/train_nationality.sbatch
+sbatch -A <your-allocation> bridges2/train_base_diffusion.sbatch
 ```
 
+Use `bridges2/train_gender.sbatch` or `bridges2/train_nationality.sbatch` for
+the conditioned mixup variants. All three scripts set a default config, then call
+the shared `bridges2/run_experiment_body.sh` logic.
+
 The launcher uses the private `$HOME/.venvs/caarma` environment and requests one
-V100-32 GPU, 5 CPU cores, and 60GB RAM in `GPU-shared`. This is intentional:
-pairing is local to each process's batch, so starting with one GPU avoids reducing
-the number of same-nationality candidates across DDP ranks. Adjust the GPU type,
-memory, time, or batch size to match your allocation and measured usage.
+V100-32 GPU, 4 CPU cores, and 62GB RAM in `GPU-shared`. Each train job now runs
+training, selects the best checkpoint by lowest validation `cosine_eer`, and then
+tests that checkpoint on `CAARMA_TEST_SPLIT`, defaulting to `test`.
+
+To get mail from Slurm, add these flags to `sbatch`:
+
+```bash
+--mail-user=<your-email> --mail-type=BEGIN,END,FAIL
+```

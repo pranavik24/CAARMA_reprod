@@ -1,8 +1,8 @@
-# Compatibility alias for the modular nationality-conditioned mixup config.
-experiment_type: nationality
-condition_attribute: nationality
-synthetic_strategy: avg
-adversarial_enabled: true
+# Base clean CAARMA config for Bridges-2.
+experiment_type: base
+condition_attribute: none
+synthetic_strategy: none
+adversarial_enabled: false
 model: MFA-CONFORMER
 features: FBank_New
 augmentations:
@@ -19,10 +19,10 @@ test_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_t
 active_split: train
 derive_num_spk: true
 USE_WANDB: true
-wandb_project: caarma-nationality
+wandb_project: caarma-base
 criterion: AMSoftmaxGAN
-init_lr: 0.001
-epochs: 20
+init_lr: 0.0003
+epochs: 30
 weight_decay: 0.0000001
 trial_path: data/vox1_test.txt
 root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
@@ -33,24 +33,19 @@ validation_max_speakers: 1000
 validation_pos_pairs_per_speaker: 2
 validation_neg_pairs_per_speaker: 5
 warmup_step: 2000
-batch_size: 50
+batch_size: 100
 num_workers: 4
 val_num_workers: 4
 train_drop_last: true
 second: 3
 do_augmentation: false
 num_spk: 942
-mixup: true
-nationality_mixup: true
-lambda_syn: 0.05
-discriminator: simple
-discriminator_hidden_dim: 256
-discriminator_dropout: 0.1
+mixup: false
+save_top_k: 3
 validate_during_train: true
-vox1_meta_path: vox1_meta.csv
 embedding_dim: 192
 checkpoint_path: null
-save_dir: ${PROJECT}/caarma-output/nationality
-title: caarma_nationality
-score_output_prefix: caarma_nationality
+save_dir: ${PROJECT}/caarma-output/base-clean
+title: caarma_base_clean
+score_output_prefix: caarma_base_clean
 devices: 1

@@ -14,7 +14,7 @@ set -euo pipefail
 : "${CAARMA_CHECKPOINT:?Set CAARMA_CHECKPOINT to the checkpoint .ckpt to evaluate}"
 
 REPO_ROOT="${CAARMA_REPO_ROOT:-${PROJECT}/CAARMA_reprod}"
-CONFIG_PATH="${CAARMA_CONFIG:-${REPO_ROOT}/configs/gender_bridges2.yaml}"
+CONFIG_PATH="${CAARMA_CONFIG:-${REPO_ROOT}/configs/gender_mixup_bridges2.yaml}"
 ENV_ROOT="${HOME}/.venvs/caarma"
 TEST_SPLIT="${CAARMA_TEST_SPLIT:-test}"
 SCORE_PREFIX="${CAARMA_SCORE_PREFIX:-caarma_gender_${TEST_SPLIT}}"
@@ -52,10 +52,9 @@ mkdir -p "${PROJECT}/caarma-output/gender"
 
 "${PYTHON_BIN}" -c 'import os, sys; print("Python:", sys.executable); print("AI ENV:", os.environ.get("ENV")); print("LD_PRELOAD:", os.environ.get("LD_PRELOAD", ""))'
 "${PYTHON_BIN}" -c 'import torch; assert torch.cuda.is_available(), "CUDA is not visible"; print(torch.cuda.get_device_name(0))'
-srun "${PYTHON_BIN}" -u mixup_gender.py \
+srun "${PYTHON_BIN}" -u train.py \
     --config "${CONFIG_PATH}" \
     --mode test \
     --checkpoint-path "${CAARMA_CHECKPOINT}" \
     --validation-split "${TEST_SPLIT}" \
-    --score-output-prefix "${SCORE_PREFIX}" \
-    --sl-mixup
+    --score-output-prefix "${SCORE_PREFIX}"

@@ -265,6 +265,54 @@ class VoxCelebSplitTests(unittest.TestCase):
         self.assertEqual(root, str(self.wav_root))
         self.assertEqual(trials.shape, (4, 3))
 
+    def test_load_validation_trials_uses_configured_trial_density(self):
+        split_path = self.write_split(
+            "vox1_val.csv",
+            [
+                {
+                    "VoxCeleb1_ID": "id10001",
+                    "VGGFace1_ID": "person_a",
+                    "Gender": "f",
+                    "Nationality": "India",
+                    "Set": "val",
+                },
+                {
+                    "VoxCeleb1_ID": "id10002",
+                    "VGGFace1_ID": "person_b",
+                    "Gender": "m",
+                    "Nationality": "USA",
+                    "Set": "val",
+                },
+                {
+                    "VoxCeleb1_ID": "id10003",
+                    "VGGFace1_ID": "person_c",
+                    "Gender": "m",
+                    "Nationality": "USA",
+                    "Set": "val",
+                },
+            ],
+        )
+        for speaker in ("id10001", "id10002", "id10003"):
+            self.touch_wav(speaker, "video_a/00001.wav")
+            self.touch_wav(speaker, "video_b/00001.wav")
+            self.touch_wav(speaker, "video_c/00001.wav")
+
+        trials, _ = load_validation_trials(
+            {
+                "trial_path": str(self.root / "missing_trials.txt"),
+                "generate_validation_trials": True,
+                "val_split_csv": str(split_path),
+                "vox1_wav_root": str(self.wav_root),
+                "validation_split": "val",
+                "validation_pos_pairs_per_speaker": 2,
+                "validation_neg_pairs_per_speaker": 2,
+            }
+        )
+
+        self.assertEqual(trials.shape, (12, 3))
+        self.assertEqual(int((trials[:, 0] == "1").sum()), 6)
+        self.assertEqual(int((trials[:, 0] == "0").sum()), 6)
+
     def test_generated_validation_trials_require_cross_session_positive_pairs(self):
         split_path = self.write_split(
             "vox1_val.csv",

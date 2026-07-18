@@ -188,10 +188,32 @@ def _cross_session_pair(paths: list[str], wav_root: Path, speaker_id: str) -> tu
     return selected[0], selected[1]
 
 
+def _cross_session_pairs(
+    paths: list[str],
+    wav_root: Path,
+    speaker_id: str,
+    max_pairs: int,
+) -> list[tuple[str, str]]:
+    by_session: dict[str, str] = {}
+    for path in sorted(paths):
+        by_session.setdefault(_session_key(path, wav_root, speaker_id), path)
+
+    sessions = sorted(by_session)
+    pairs = []
+    for left_index, left_session in enumerate(sessions):
+        for right_session in sessions[left_index + 1 :]:
+            pairs.append((by_session[left_session], by_session[right_session]))
+            if len(pairs) >= max_pairs:
+                return pairs
+    return pairs
+
+
 def build_trials_from_split_csv(
     split_csv_path: str | Path,
     wav_root: str | Path,
     max_speakers: int | None = None,
+    pos_pairs_per_speaker: int = 1,
+    neg_pairs_per_speaker: int = 1,
 ) -> np.ndarray:
     """Build deterministic cross-session positive/negative trials from a split CSV."""
 
@@ -201,12 +223,19 @@ def build_trials_from_split_csv(
         speaker_id: sorted(group["utt_paths"].tolist())
         for speaker_id, group in examples.groupby("utt_spk_id")
     }
-    positive_pairs = {
-        speaker: pair
+    positive_pairs_by_speaker = {
+        speaker: pairs
         for speaker in sorted(grouped)
-        if (pair := _cross_session_pair(grouped[speaker], wav_root_path, speaker)) is not None
+        if (
+            pairs := _cross_session_pairs(
+                grouped[speaker],
+                wav_root_path,
+                speaker,
+                max(pos_pairs_per_speaker, 1),
+            )
+        )
     }
-    speakers = sorted(positive_pairs)
+    speakers = sorted(positive_pairs_by_speaker)
     if max_speakers is not None and max_speakers > 0:
         speakers = speakers[:max_speakers]
     if len(speakers) < 2:
@@ -217,25 +246,27 @@ def build_trials_from_split_csv(
 
     records = []
     for speaker in speakers:
-        enroll_wav, test_wav = positive_pairs[speaker]
-        records.append(
-            [
-                "1",
-                _relative_or_absolute(enroll_wav, wav_root_path),
-                _relative_or_absolute(test_wav, wav_root_path),
-            ]
-        )
+        for enroll_wav, test_wav in positive_pairs_by_speaker[speaker][:pos_pairs_per_speaker]:
+            records.append(
+                [
+                    "1",
+                    _relative_or_absolute(enroll_wav, wav_root_path),
+                    _relative_or_absolute(test_wav, wav_root_path),
+                ]
+            )
 
-    for left, right in zip(speakers, speakers[1:] + speakers[:1]):
-        left_wav, _ = positive_pairs[left]
-        right_wav, _ = positive_pairs[right]
-        records.append(
-            [
-                "0",
-                _relative_or_absolute(left_wav, wav_root_path),
-                _relative_or_absolute(right_wav, wav_root_path),
-            ]
-        )
+    for left_index, left in enumerate(speakers):
+        left_wav, _ = positive_pairs_by_speaker[left][0]
+        for offset in range(1, min(neg_pairs_per_speaker, len(speakers) - 1) + 1):
+            right = speakers[(left_index + offset) % len(speakers)]
+            right_wav, _ = positive_pairs_by_speaker[right][0]
+            records.append(
+                [
+                    "0",
+                    _relative_or_absolute(left_wav, wav_root_path),
+                    _relative_or_absolute(right_wav, wav_root_path),
+                ]
+            )
 
     return np.array(records, dtype=str)
 
@@ -260,4 +291,15 @@ def load_validation_trials(config: Mapping[str, object]) -> tuple[np.ndarray, st
     wav_root = str(config.get("vox1_wav_root", SERVER_WAV_ROOT))
     max_speakers_value = config.get("validation_max_speakers", 300)
     max_speakers = int(max_speakers_value) if max_speakers_value is not None else None
-    return build_trials_from_split_csv(split_path, wav_root, max_speakers=max_speakers), wav_root
+    pos_pairs_per_speaker = int(config.get("validation_pos_pairs_per_speaker", 1))
+    neg_pairs_per_speaker = int(config.get("validation_neg_pairs_per_speaker", 1))
+    return (
+        build_trials_from_split_csv(
+            split_path,
+            wav_root,
+            max_speakers=max_speakers,
+            pos_pairs_per_speaker=pos_pairs_per_speaker,
+            neg_pairs_per_speaker=neg_pairs_per_speaker,
+        ),
+        wav_root,
+    )

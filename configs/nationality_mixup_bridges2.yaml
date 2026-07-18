@@ -1,4 +1,4 @@
-# Compatibility alias for the modular nationality-conditioned mixup config.
+# Nationality-conditioned average-mixup config for Bridges-2.
 experiment_type: nationality
 condition_attribute: nationality
 synthetic_strategy: avg

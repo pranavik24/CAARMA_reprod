@@ -14,6 +14,7 @@ def build_criterion(config):
             diffusion_beta_start=float(config.get("diffusion_beta_start", 0.0001)),
             diffusion_beta_end=float(config.get("diffusion_beta_end", 0.02)),
             diffusion_embedding_noise=float(config.get("diffusion_embedding_noise", 0.0)),
+            diffusion_fake_fraction=float(config.get("diffusion_fake_fraction", 1.0)),
         )
     else:
         raise NotImplementedError

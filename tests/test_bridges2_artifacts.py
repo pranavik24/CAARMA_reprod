@@ -18,17 +18,29 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertNotIn("google.colab", source)
         self.assertNotIn("/content", source)
 
-    def test_slurm_script_requests_one_gpu_and_uses_srun(self):
+    def test_shared_slurm_body_trains_then_tests(self):
+        source = (ROOT / "bridges2" / "run_experiment_body.sh").read_text()
+
+        self.assertIn("conda.sh", source)
+        self.assertIn("module load", source)
+        self.assertIn("srun", source)
+        self.assertIn("--mode train", source)
+        self.assertIn("--mode test", source)
+        self.assertIn("BEST_CKPT", source)
+        self.assertIn("cosine_eer=", source)
+        self.assertIn("TEST_SPLIT=\"${CAARMA_TEST_SPLIT:-test}\"", source)
+        self.assertNotIn("#SBATCH --account=", source)
+
+    def test_train_nationality_script_sets_modular_defaults(self):
         source = (ROOT / "bridges2" / "train_nationality.sbatch").read_text()
 
         self.assertIn("#SBATCH --partition=GPU-shared", source)
         self.assertIn("#SBATCH --gpus=v100-32:1", source)
         self.assertIn("#SBATCH --cpus-per-task=4", source)
         self.assertIn("#SBATCH --mem=62000M", source)
-        self.assertIn("conda.sh", source)
-        self.assertIn("srun", source)
-        self.assertIn("mixup_nationality.py", source)
-        self.assertIn("configs/nationality_bridges2.yaml", source)
+        self.assertIn("configs/nationality_mixup_bridges2.yaml", source)
+        self.assertIn("CAARMA_ENTRYPOINT=\"${CAARMA_ENTRYPOINT:-train.py}\"", source)
+        self.assertIn("run_experiment_body.sh", source)
         self.assertNotIn("#SBATCH --account=", source)
 
     def test_test_slurm_script_runs_nationality_test_mode(self):
@@ -36,29 +48,23 @@ class Bridges2ArtifactTests(unittest.TestCase):
 
         self.assertIn("#SBATCH --gpus=v100-32:1", source)
         self.assertIn("CAARMA_CHECKPOINT", source)
+        self.assertIn("train.py", source)
+        self.assertIn("configs/nationality_mixup_bridges2.yaml", source)
         self.assertIn("--mode test", source)
         self.assertIn("--validation-split", source)
         self.assertIn("TEST_SPLIT=\"${CAARMA_TEST_SPLIT:-test}\"", source)
         self.assertIn("srun", source)
         self.assertNotIn("#SBATCH --account=", source)
 
-    def test_gender_slurm_script_runs_gender_entrypoint(self):
+    def test_gender_slurm_script_sets_modular_defaults(self):
         source = (ROOT / "bridges2" / "train_gender.sbatch").read_text()
 
         self.assertIn("#SBATCH --gpus=v100-32:1", source)
         self.assertIn("#SBATCH --cpus-per-task=4", source)
         self.assertIn("#SBATCH --mem=62000M", source)
-        self.assertIn("conda.sh", source)
-        self.assertIn("mixup_gender.py", source)
-        self.assertIn("configs/gender_bridges2.yaml", source)
-        self.assertIn("--mode train", source)
-        self.assertIn("--mode test", source)
-        self.assertIn("BEST_CKPT", source)
-        self.assertIn("cosine_eer=", source)
-        self.assertIn("TEST_SPLIT=\"${CAARMA_TEST_SPLIT:-test}\"", source)
-        self.assertIn("SCORE_PREFIX=\"${CAARMA_SCORE_PREFIX:-caarma_gender_${TEST_SPLIT}}\"", source)
-        self.assertIn("--sl-mixup", source)
-        self.assertIn("srun", source)
+        self.assertIn("configs/gender_mixup_bridges2.yaml", source)
+        self.assertIn("CAARMA_ENTRYPOINT=\"${CAARMA_ENTRYPOINT:-train.py}\"", source)
+        self.assertIn("run_experiment_body.sh", source)
         self.assertNotIn("#SBATCH --account=", source)
 
     def test_test_slurm_script_runs_gender_test_mode(self):
@@ -66,8 +72,8 @@ class Bridges2ArtifactTests(unittest.TestCase):
 
         self.assertIn("#SBATCH --gpus=v100-32:1", source)
         self.assertIn("CAARMA_CHECKPOINT", source)
-        self.assertIn("mixup_gender.py", source)
-        self.assertIn("configs/gender_bridges2.yaml", source)
+        self.assertIn("train.py", source)
+        self.assertIn("configs/gender_mixup_bridges2.yaml", source)
         self.assertIn("--mode test", source)
         self.assertIn("--validation-split", source)
         self.assertIn("--score-output-prefix", source)
@@ -75,23 +81,26 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("srun", source)
         self.assertNotIn("#SBATCH --account=", source)
 
-    def test_base_diffusion_slurm_script_runs_base_entrypoint(self):
+    def test_base_diffusion_slurm_script_sets_modular_defaults(self):
         source = (ROOT / "bridges2" / "train_base_diffusion.sbatch").read_text()
 
         self.assertIn("#SBATCH --job-name=caarma-base-diffusion", source)
         self.assertIn("#SBATCH --output=caarma-base-diffusion-%j.out", source)
         self.assertIn("#SBATCH --gpus=v100-32:1", source)
         self.assertIn("configs/base_diffusion_bridges2.yaml", source)
-        self.assertIn("train.py", source)
-        self.assertIn("srun", source)
+        self.assertIn("CAARMA_ENTRYPOINT=\"${CAARMA_ENTRYPOINT:-train.py}\"", source)
+        self.assertIn("run_experiment_body.sh", source)
         self.assertNotIn("--sl-mixup", source)
         self.assertNotIn("#SBATCH --account=", source)
 
-    def test_static_config_does_not_oversubscribe_one_gpu_cpu_allocation(self):
-        source = (ROOT / "configs" / "nationality_bridges2.yaml").read_text()
+    def test_nationality_config_is_explicit(self):
+        source = (ROOT / "configs" / "nationality_mixup_bridges2.yaml").read_text()
 
+        self.assertIn("Nationality-conditioned average-mixup config", source)
+        self.assertIn("experiment_type: nationality", source)
+        self.assertIn("condition_attribute: nationality", source)
+        self.assertIn("synthetic_strategy: avg", source)
         self.assertIn("epochs: 20", source)
-        self.assertIn("Nationality mixup config", source)
         self.assertIn("num_workers: 4", source)
         self.assertIn("val_num_workers: 4", source)
         self.assertIn("train_drop_last: true", source)
@@ -105,34 +114,38 @@ class Bridges2ArtifactTests(unittest.TestCase):
         source = (ROOT / "configs" / "base_diffusion_bridges2.yaml").read_text()
 
         self.assertIn("Base diffusion-mixup config", source)
+        self.assertIn("experiment_type: base", source)
+        self.assertIn("condition_attribute: none", source)
         self.assertIn("synthetic_strategy: diffusion", source)
+        self.assertIn("adversarial_enabled: false", source)
+        self.assertIn("wandb_project: caarma-diffusion", source)
         self.assertIn("diffusion_timesteps: 100", source)
-        self.assertIn("diffusion_t_min: 1", source)
-        self.assertIn("diffusion_t_max: 20", source)
+        self.assertIn("diffusion_t_min: 0", source)
+        self.assertIn("diffusion_t_max: 3", source)
+        self.assertIn("diffusion_fake_fraction: 0.25", source)
+        self.assertIn("lambda_syn: 0.01", source)
         self.assertIn("batch_size: 100", source)
         self.assertIn("num_workers: 4", source)
         self.assertIn("generate_validation_trials: true", source)
         self.assertIn("validation_split: val", source)
-        self.assertIn("num_spk: 1211", source)
-        self.assertIn("save_dir: \"${PROJECT}/caarma-output/base-diffusion\"", source)
+        self.assertIn("validation_pos_pairs_per_speaker: 2", source)
+        self.assertIn("validation_neg_pairs_per_speaker: 5", source)
+        self.assertIn("num_spk: 942", source)
+        self.assertIn("save_dir: ${PROJECT}/caarma-output/base-diffusion", source)
+        self.assertNotIn("caarma-gender", source)
 
     def test_gender_config_uses_server_splits_and_intermediate_discriminator(self):
-        source = (ROOT / "configs" / "gender_bridges2.yaml").read_text()
+        source = (ROOT / "configs" / "gender_mixup_bridges2.yaml").read_text()
 
-        self.assertIn("USE_WANDB: true", source)
-        self.assertIn("Gender diffusion-mixup config", source)
+        self.assertIn("Gender-conditioned average-mixup config", source)
+        self.assertIn("experiment_type: gender", source)
+        self.assertIn("condition_attribute: gender", source)
         self.assertIn("wandb_project: caarma-gender", source)
         self.assertIn("init_lr: 0.0003", source)
         self.assertIn("epochs: 30", source)
         self.assertIn("batch_size: 100", source)
         self.assertIn("sl_mixup: true", source)
-        self.assertIn("synthetic_strategy: diffusion", source)
-        self.assertIn("diffusion_timesteps: 100", source)
-        self.assertIn("diffusion_t_min: 1", source)
-        self.assertIn("diffusion_t_max: 5", source)
-        self.assertIn("diffusion_beta_start: 0.0001", source)
-        self.assertIn("diffusion_beta_end: 0.02", source)
-        self.assertIn("diffusion_embedding_noise: 0.005", source)
+        self.assertIn("synthetic_strategy: avg", source)
         self.assertIn("discriminator: intermediate", source)
         self.assertIn("discriminator_hidden_dim: 512", source)
         self.assertIn("discriminator_mid_dim: 384", source)
@@ -148,6 +161,8 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("save_top_k: 3", source)
         self.assertIn("generate_validation_trials: true", source)
         self.assertIn("validation_max_speakers: 1000", source)
+        self.assertIn("validation_pos_pairs_per_speaker: 2", source)
+        self.assertIn("validation_neg_pairs_per_speaker: 5", source)
         self.assertIn("validate_during_train: true", source)
         self.assertIn("save_dir: ${PROJECT}/caarma-output/gender", source)
 

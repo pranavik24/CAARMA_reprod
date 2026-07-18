@@ -22,6 +22,7 @@ class amsoftmax_gan(nn.Module):
         diffusion_beta_start=0.0001,
         diffusion_beta_end=0.02,
         diffusion_embedding_noise=0.0,
+        diffusion_fake_fraction=1.0,
         **kwargs,
     ):
         super(amsoftmax_gan, self).__init__()
@@ -36,6 +37,7 @@ class amsoftmax_gan(nn.Module):
         self.diffusion_beta_start = diffusion_beta_start
         self.diffusion_beta_end = diffusion_beta_end
         self.diffusion_embedding_noise = diffusion_embedding_noise
+        self.diffusion_fake_fraction = diffusion_fake_fraction
         self.W = torch.nn.Parameter(torch.randn(embedding_dim, num_classes), requires_grad=True)
         self.ce = nn.CrossEntropyLoss()
         nn.init.xavier_normal_(self.W, gain=1)
@@ -63,6 +65,7 @@ class amsoftmax_gan(nn.Module):
                 diffusion_beta_start=self.diffusion_beta_start,
                 diffusion_beta_end=self.diffusion_beta_end,
                 diffusion_embedding_noise=self.diffusion_embedding_noise,
+                diffusion_fake_fraction=self.diffusion_fake_fraction,
             )
         else:
             synthetic_embeddings,  y_combined , w_combined = mixup_data_euc_avg(

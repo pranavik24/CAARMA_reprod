@@ -46,11 +46,12 @@ caarma/
 │   ├── discriminator_mix.py
 │   └── build_model.py
 ├── configs/                  # YAML configs grouped by purpose
-│   ├── base.yaml             # Original clean CAARMA training config
-│   ├── base_diffusion_bridges2.yaml # Base diffusion-mixup Bridges-2 config
-│   ├── gender_bridges2.yaml  # Gender diffusion-mixup Bridges-2 config
-│   └── nationality_bridges2.yaml # Nationality mixup Bridges-2 config
-├── train.py                # Training script
+│   ├── base_clean_bridges2.yaml # Clean server-split Bridges-2 config
+│   ├── base_diffusion_bridges2.yaml # Non-conditional diffusion config
+│   ├── gender_mixup_bridges2.yaml # Gender-conditioned mixup config
+│   └── nationality_mixup_bridges2.yaml # Nationality-conditioned mixup config
+├── experiments/            # Shared modular training/evaluation pipeline
+├── train.py                # Modular training/testing entrypoint
 ├── requirements.txt       # Python dependencies
 └── README.md
 ```
@@ -72,10 +73,23 @@ Inside the selected config file, make sure to:
 For Bridges-2 runs, use the role-specific configs:
 
 ```bash
-python mixup_gender.py --config configs/gender_bridges2.yaml --mode train --sl-mixup
-python mixup_nationality.py --config configs/nationality_bridges2.yaml --mode train --nationality-mixup
-python train.py --config configs/base_diffusion_bridges2.yaml
+python train.py --config configs/base_clean_bridges2.yaml --mode train
+python train.py --config configs/base_diffusion_bridges2.yaml --mode train
+python train.py --config configs/gender_mixup_bridges2.yaml --mode train
+python train.py --config configs/nationality_mixup_bridges2.yaml --mode train
 ```
+
+The experiment type is config-driven:
+
+```yaml
+experiment_type: base | gender | nationality
+synthetic_strategy: none | avg | diffusion
+condition_attribute: none | gender | nationality
+adversarial_enabled: true | false
+```
+
+The old `mixup_gender.py` and `mixup_nationality.py` files are kept as thin
+compatibility wrappers around the same shared runner.
 
 ---
 ## 📌 Citation

@@ -1,4 +1,8 @@
-# Gender diffusion-mixup config for Bridges-2 (`mixup_gender.py`).
+# Compatibility alias for the modular gender-conditioned mixup config.
+experiment_type: gender
+condition_attribute: gender
+synthetic_strategy: avg
+adversarial_enabled: true
 model: MFA-CONFORMER
 features: FBank_New
 augmentations:
@@ -13,6 +17,7 @@ train_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_
 val_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv
 test_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv
 active_split: train
+derive_num_spk: true
 USE_WANDB: true
 wandb_project: caarma-gender
 criterion: AMSoftmaxGAN
@@ -25,6 +30,8 @@ generate_validation_trials: true
 validation_split: val
 validation_trial_protocol: generated_cross_session
 validation_max_speakers: 1000
+validation_pos_pairs_per_speaker: 2
+validation_neg_pairs_per_speaker: 5
 warmup_step: 2000
 batch_size: 100
 num_workers: 4
@@ -35,13 +42,6 @@ do_augmentation: false
 num_spk: 942
 mixup: true
 sl_mixup: true
-synthetic_strategy: diffusion
-diffusion_timesteps: 100
-diffusion_t_min: 1
-diffusion_t_max: 5
-diffusion_beta_start: 0.0001
-diffusion_beta_end: 0.02
-diffusion_embedding_noise: 0.005
 discriminator: intermediate
 discriminator_hidden_dim: 512
 discriminator_mid_dim: 384

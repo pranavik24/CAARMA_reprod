@@ -147,6 +147,19 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("save_dir: ${PROJECT}/caarma-output/base-diffusion", source)
         self.assertNotIn("caarma-gender", source)
 
+    def test_base_diffusion_2to1_config_sets_half_fake_fraction(self):
+        source = (ROOT / "configs" / "base_diffusion_2to1_bridges2.yaml").read_text()
+
+        self.assertIn("2:1 real-to-fake speaker ratio", source)
+        self.assertIn("experiment_type: base", source)
+        self.assertIn("condition_attribute: none", source)
+        self.assertIn("synthetic_strategy: diffusion", source)
+        self.assertIn("adversarial_enabled: false", source)
+        self.assertIn("diffusion_fake_fraction: 0.5", source)
+        self.assertIn("save_dir: ${PROJECT}/caarma-output/base-diffusion-2to1", source)
+        self.assertIn("title: caarma_base_diffusion_2to1", source)
+        self.assertNotIn("caarma-gender", source)
+
     def test_gender_config_uses_server_splits_and_intermediate_discriminator(self):
         source = (ROOT / "configs" / "gender_mixup_bridges2.yaml").read_text()
 

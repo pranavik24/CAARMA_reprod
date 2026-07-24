@@ -129,12 +129,14 @@ When the user explicitly asks to implement any part of this plan:
 ## Bridges-2 Runbook To Give User After Implementation
 
 From the local machine, before pulling new GitHub changes into a dirty Bridges-2
-checkout, preserve any uncommitted Bridges-2 work:
+checkout, preserve any uncommitted Bridges-2 work. Do not use `git stash -u`
+when an untracked `data/veri_test.txt` is needed for evaluation, because that
+would temporarily remove the trial protocol before the job starts:
 
 ```bash
 cd "$PROJECT/CAARMA_reprod"
 git status
-git stash push -u -m "bridges2 local work before CAARMA update"
+git stash push -m "bridges2 local work before CAARMA update"
 git pull --rebase
 git stash list
 ```
@@ -201,3 +203,9 @@ tail -f caarma-base-diffusion-<job-id>.out
 Remember: if a Slurm script sources shared shell logic, it should source it from
 `"${REPO_ROOT}/bridges2/..."`, not from `${BASH_SOURCE[0]}`, because Slurm may
 execute a spool copy under `/var/spool/slurm/...`.
+
+Current configs use the static VoxCeleb verification protocol at
+`data/veri_test.txt`. The file should contain rows like
+`1 id10001/path-a.wav id10001/path-b.wav`, with paths relative to
+`vox1_wav_root`. If it is missing or empty on Bridges-2, the baseline will not
+match the original CAARMA evaluation.

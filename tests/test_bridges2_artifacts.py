@@ -7,6 +7,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Bridges2ArtifactTests(unittest.TestCase):
+    def test_configs_use_static_veri_test_trials(self):
+        config_paths = sorted((ROOT / "configs").glob("*.yaml"))
+
+        for config_path in config_paths:
+            with self.subTest(config_path=config_path.name):
+                source = config_path.read_text()
+
+                self.assertIn("veri_test.txt", source)
+                self.assertNotIn("vox1_test.txt", source)
+
     def test_notebook_is_cluster_oriented_and_runs_nationality_entrypoint(self):
         notebook = json.loads((ROOT / "CAARMA_nationality_bridges2.ipynb").read_text())
         source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])

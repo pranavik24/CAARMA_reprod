@@ -92,7 +92,7 @@ class ExperimentConfigTests(unittest.TestCase):
 
     def test_config_relative_paths_preserve_legacy_repo_root_resolution(self):
         repo_data = self.split_dir
-        trial_path = repo_data / "vox1_test.txt"
+        trial_path = repo_data / "veri_test.txt"
         trial_path.write_text("1 id10001/a.wav id10001/b.wav\n", encoding="utf-8")
         meta_path = self.root / "vox1_meta.csv"
         meta_path.write_text("VoxCeleb1_ID,Gender\nid10001,m\n", encoding="utf-8")
@@ -103,7 +103,7 @@ class ExperimentConfigTests(unittest.TestCase):
                 "condition_attribute": "none",
                 "synthetic_strategy": "none",
                 "train_split_csv": str(self.train_split),
-                "trial_path": "data/vox1_test.txt",
+                "trial_path": "data/veri_test.txt",
                 "vox1_meta_path": "vox1_meta.csv",
                 "save_dir": "caarma-output/base-baseline",
                 "wandb_project": "caarma-base",

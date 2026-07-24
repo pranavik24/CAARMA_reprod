@@ -1,0 +1,51 @@
+# Baseline MFA-Conformer config for Bridges-2 with no false/synthetic speakers.
+experiment_type: base
+condition_attribute: none
+synthetic_strategy: none
+adversarial_enabled: false
+model: MFA-CONFORMER
+features: FBank_New
+augmentations:
+  add_noise: false
+  add_reverb: false
+  drop_freq: false
+  drop_chunk: false
+dataset: null
+vox1_wav_root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
+vox1_split_dir: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data
+train_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_train.csv
+val_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv
+test_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv
+active_split: train
+derive_num_spk: true
+USE_WANDB: true
+wandb_project: caarma-base
+criterion: AMSoftmaxGAN
+init_lr: 0.0003
+epochs: 30
+weight_decay: 0.0000001
+trial_path: data/vox1_test.txt
+root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
+generate_validation_trials: true
+validation_split: val
+validation_trial_protocol: generated_cross_session
+validation_max_speakers: 1000
+validation_pos_pairs_per_speaker: 2
+validation_neg_pairs_per_speaker: 5
+warmup_step: 2000
+batch_size: 100
+num_workers: 4
+val_num_workers: 4
+train_drop_last: true
+second: 3
+do_augmentation: false
+num_spk: 942
+mixup: false
+save_top_k: 3
+validate_during_train: true
+embedding_dim: 192
+checkpoint_path: null
+save_dir: ${PROJECT}/caarma-output/base-baseline-no-false
+title: caarma_base_baseline_no_false
+score_output_prefix: caarma_base_baseline_no_false
+devices: 1

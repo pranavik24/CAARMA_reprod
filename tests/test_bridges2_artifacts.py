@@ -147,6 +147,22 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("save_dir: ${PROJECT}/caarma-output/base-diffusion", source)
         self.assertNotIn("caarma-gender", source)
 
+    def test_base_baseline_no_false_config_disables_synthetic_speakers(self):
+        source = (ROOT / "configs" / "base_baseline_no_false_bridges2.yaml").read_text()
+
+        self.assertIn("Baseline MFA-Conformer config", source)
+        self.assertIn("experiment_type: base", source)
+        self.assertIn("condition_attribute: none", source)
+        self.assertIn("synthetic_strategy: none", source)
+        self.assertIn("adversarial_enabled: false", source)
+        self.assertIn("mixup: false", source)
+        self.assertIn("wandb_project: caarma-base", source)
+        self.assertIn("save_dir: ${PROJECT}/caarma-output/base-baseline-no-false", source)
+        self.assertIn("title: caarma_base_baseline_no_false", source)
+        self.assertNotIn("diffusion_fake_fraction", source)
+        self.assertNotIn("lambda_syn", source)
+        self.assertNotIn("caarma-gender", source)
+
     def test_base_diffusion_2to1_config_sets_half_fake_fraction(self):
         source = (ROOT / "configs" / "base_diffusion_2to1_bridges2.yaml").read_text()
 

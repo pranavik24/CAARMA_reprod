@@ -90,6 +90,38 @@ class ExperimentConfigTests(unittest.TestCase):
         self.assertEqual(config["condition_attribute"], "none")
         self.assertFalse(config["adversarial_enabled"])
 
+    def test_config_relative_paths_preserve_legacy_repo_root_resolution(self):
+        repo_data = self.split_dir
+        trial_path = repo_data / "vox1_test.txt"
+        trial_path.write_text("1 id10001/a.wav id10001/b.wav\n", encoding="utf-8")
+        meta_path = self.root / "vox1_meta.csv"
+        meta_path.write_text("VoxCeleb1_ID,Gender\nid10001,m\n", encoding="utf-8")
+
+        config = prepare_experiment_config(
+            {
+                "experiment_type": "base",
+                "condition_attribute": "none",
+                "synthetic_strategy": "none",
+                "train_split_csv": str(self.train_split),
+                "trial_path": "data/vox1_test.txt",
+                "vox1_meta_path": "vox1_meta.csv",
+                "save_dir": "caarma-output/base-baseline",
+                "wandb_project": "caarma-base",
+                "title": "caarma_base_baseline",
+                "score_output_prefix": "caarma_base_baseline",
+            },
+            self.root / "configs" / "base_baseline_no_false_bridges2.yaml",
+            self.args(),
+            default_experiment_type="base",
+        )
+
+        self.assertEqual(config["trial_path"], str(trial_path.resolve()))
+        self.assertEqual(config["vox1_meta_path"], str(meta_path.resolve()))
+        self.assertEqual(
+            config["save_dir"],
+            str((self.root / "caarma-output" / "base-baseline").resolve()),
+        )
+
     def test_rejects_base_config_that_logs_to_gender_project(self):
         with self.assertRaisesRegex(ValueError, "base.*gender"):
             prepare_experiment_config(

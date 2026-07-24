@@ -79,6 +79,12 @@ def _none_like(value: Any) -> bool:
     return value is None or str(value).strip().lower() in {"", "none", "null"}
 
 
+def _path_base_dir(config_dir: Path) -> Path:
+    if config_dir.name == "configs":
+        return config_dir.parent
+    return config_dir
+
+
 def _resolve_path(value: Any, base_dir: Path) -> Any:
     if _none_like(value):
         return value
@@ -301,6 +307,7 @@ def prepare_experiment_config(
     default_experiment_type: str = "base",
 ) -> Dict[str, Any]:
     config_dir = config_path.resolve().parent
+    path_base_dir = _path_base_dir(config_dir)
     prepared = dict(config)
     prepared["_mode"] = getattr(args, "mode", "train")
 
@@ -328,7 +335,7 @@ def prepare_experiment_config(
 
     for key in PATH_KEYS:
         if key in prepared:
-            prepared[key] = _resolve_path(prepared[key], config_dir)
+            prepared[key] = _resolve_path(prepared[key], path_base_dir)
 
     if "root" in prepared:
         prepared["root"] = _ensure_root_suffix(prepared["root"])

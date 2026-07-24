@@ -157,11 +157,23 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("adversarial_enabled: false", source)
         self.assertIn("mixup: false", source)
         self.assertIn("wandb_project: caarma-base", source)
+        self.assertIn("train_drop_last: false", source)
+        self.assertIn("validation_pos_pairs_per_speaker: 1", source)
+        self.assertIn("validation_neg_pairs_per_speaker: 1", source)
         self.assertIn("save_dir: ${PROJECT}/caarma-output/base-baseline-no-false", source)
         self.assertIn("title: caarma_base_baseline_no_false", source)
         self.assertNotIn("diffusion_fake_fraction", source)
         self.assertNotIn("lambda_syn", source)
         self.assertNotIn("caarma-gender", source)
+
+    def test_base_clean_config_uses_baseline_validation_protocol(self):
+        source = (ROOT / "configs" / "base_clean_bridges2.yaml").read_text()
+
+        self.assertIn("synthetic_strategy: none", source)
+        self.assertIn("mixup: false", source)
+        self.assertIn("train_drop_last: false", source)
+        self.assertIn("validation_pos_pairs_per_speaker: 1", source)
+        self.assertIn("validation_neg_pairs_per_speaker: 1", source)
 
     def test_base_diffusion_2to1_config_sets_half_fake_fraction(self):
         source = (ROOT / "configs" / "base_diffusion_2to1_bridges2.yaml").read_text()

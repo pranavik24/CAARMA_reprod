@@ -30,13 +30,13 @@ generate_validation_trials: true
 validation_split: val
 validation_trial_protocol: generated_cross_session
 validation_max_speakers: 1000
-validation_pos_pairs_per_speaker: 2
-validation_neg_pairs_per_speaker: 5
+validation_pos_pairs_per_speaker: 1
+validation_neg_pairs_per_speaker: 1
 warmup_step: 2000
 batch_size: 100
 num_workers: 4
 val_num_workers: 4
-train_drop_last: true
+train_drop_last: false
 second: 3
 do_augmentation: false
 num_spk: 942

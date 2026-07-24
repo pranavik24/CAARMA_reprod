@@ -160,6 +160,21 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("title: caarma_base_diffusion_2to1", source)
         self.assertNotIn("caarma-gender", source)
 
+    def test_base_diffusion_2to1_low_lambda_config_sets_half_fake_fraction(self):
+        source = (ROOT / "configs" / "base_diffusion_2to1_lambdasyn005_bridges2.yaml").read_text()
+
+        self.assertIn("2:1 real-to-fake speaker ratio", source)
+        self.assertIn("lower synthetic loss weight", source)
+        self.assertIn("experiment_type: base", source)
+        self.assertIn("condition_attribute: none", source)
+        self.assertIn("synthetic_strategy: diffusion", source)
+        self.assertIn("adversarial_enabled: false", source)
+        self.assertIn("diffusion_fake_fraction: 0.5", source)
+        self.assertIn("lambda_syn: 0.005", source)
+        self.assertIn("save_dir: ${PROJECT}/caarma-output/base-diffusion-2to1-lambdasyn005", source)
+        self.assertIn("title: caarma_base_diffusion_2to1_lambdasyn005", source)
+        self.assertNotIn("caarma-gender", source)
+
     def test_base_diffusion_3to1_config_sets_third_fake_fraction(self):
         source = (ROOT / "configs" / "base_diffusion_3to1_bridges2.yaml").read_text()
 

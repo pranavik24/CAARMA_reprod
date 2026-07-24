@@ -13,7 +13,7 @@ env/
 .venv-*/
 
 # Local data and generated artifacts
-data/
+# data/
 local_data/
 caarma-data/
 voxceleb1/

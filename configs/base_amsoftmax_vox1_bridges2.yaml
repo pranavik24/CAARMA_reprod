@@ -1,4 +1,5 @@
 # VoxCeleb1-only MFA-Conformer config for Bridges-2 using plain AMSoftmax.
+# Non-leaky baseline: train on vox1_train and reserve veri_test.txt for final test only.
 experiment_type: base
 condition_attribute: none
 synthetic_strategy: none
@@ -16,7 +17,7 @@ vox1_split_dir: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data
 train_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_train.csv
 val_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv
 test_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv
-active_split: all
+active_split: train
 derive_num_spk: true
 USE_WANDB: true
 wandb_project: caarma-base
@@ -24,7 +25,7 @@ criterion: AMSoftmax
 init_lr: 0.001
 epochs: 30
 weight_decay: 0.0000001
-trial_path: data/veri_test.txt
+trial_path: null
 root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
 generate_validation_trials: true
 validation_split: val
@@ -34,18 +35,18 @@ validation_pos_pairs_per_speaker: 1
 validation_neg_pairs_per_speaker: 1
 warmup_step: 2000
 batch_size: 200
-num_workers: 40
-val_num_workers: 10
+num_workers: 4
+val_num_workers: 4
 train_drop_last: false
 second: 3
 do_augmentation: false
-num_spk: 1211
+num_spk: 942
 mixup: false
 save_top_k: 3
 validate_during_train: true
 embedding_dim: 192
 checkpoint_path: null
-save_dir: ${PROJECT}/caarma-output/base-amsoftmax-vox1
-title: caarma_base_amsoftmax_vox1
-score_output_prefix: caarma_base_amsoftmax_vox1
+save_dir: ${PROJECT}/caarma-output/base-amsoftmax-vox1-clean
+title: caarma_base_amsoftmax_vox1_clean
+score_output_prefix: caarma_base_amsoftmax_vox1_clean
 devices: 1

@@ -10,6 +10,7 @@ CONFIG_PATH="${CAARMA_CONFIG:?Set CAARMA_CONFIG to one of the configs/*.yaml exp
 ENV_ROOT="${HOME}/.venvs/caarma"
 ENTRYPOINT="${CAARMA_ENTRYPOINT:-train.py}"
 TEST_SPLIT="${CAARMA_TEST_SPLIT:-test}"
+TEST_TRIAL_PATH="${CAARMA_TEST_TRIAL_PATH:-${REPO_ROOT}/data/veri_test.txt}"
 
 for conda_hook in \
     /opt/packages/anaconda3/etc/profile.d/conda.sh \
@@ -84,6 +85,11 @@ SCORE_PREFIX="${CAARMA_SCORE_PREFIX:-${CONFIG_VALUES[1]}_${TEST_SPLIT}}"
 
 mkdir -p "${SAVE_DIR}"
 
+if [[ ! -s "${TEST_TRIAL_PATH}" ]]; then
+    echo "Missing final test trial protocol: ${TEST_TRIAL_PATH}" >&2
+    exit 2
+fi
+
 "${PYTHON_BIN}" -c 'import os, sys; print("Python:", sys.executable); print("AI ENV:", os.environ.get("ENV")); print("LD_PRELOAD:", os.environ.get("LD_PRELOAD", "")); print("LD_LIBRARY_PATH:", os.environ.get("LD_LIBRARY_PATH", ""))'
 "${PYTHON_BIN}" -c 'import torch; assert torch.cuda.is_available(), "CUDA is not visible"; print(torch.cuda.get_device_name(0))'
 
@@ -127,5 +133,6 @@ srun "${PYTHON_BIN}" -u "${ENTRYPOINT}" \
     --config "${CONFIG_PATH}" \
     --mode test \
     --checkpoint-path "${BEST_CKPT}" \
+    --trial-path "${TEST_TRIAL_PATH}" \
     --validation-split "${TEST_SPLIT}" \
     --score-output-prefix "${SCORE_PREFIX}"

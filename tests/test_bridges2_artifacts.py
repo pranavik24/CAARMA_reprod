@@ -14,7 +14,10 @@ class Bridges2ArtifactTests(unittest.TestCase):
             with self.subTest(config_path=config_path.name):
                 source = config_path.read_text()
 
-                self.assertIn("veri_test.txt", source)
+                if config_path.name in {"base.yaml", "base_amsoftmax_vox1_bridges2.yaml"}:
+                    self.assertIn("trial_path: null", source)
+                else:
+                    self.assertIn("veri_test.txt", source)
                 self.assertNotIn("vox1_test.txt", source)
 
     def test_configs_do_not_use_voxceleb2_full_speaker_count(self):
@@ -49,6 +52,8 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("BEST_CKPT", source)
         self.assertIn("cosine_eer=", source)
         self.assertIn("TEST_SPLIT=\"${CAARMA_TEST_SPLIT:-test}\"", source)
+        self.assertIn("TEST_TRIAL_PATH=\"${CAARMA_TEST_TRIAL_PATH:-${REPO_ROOT}/data/veri_test.txt}\"", source)
+        self.assertIn("--trial-path \"${TEST_TRIAL_PATH}\"", source)
         self.assertNotIn("#SBATCH --account=", source)
 
     def test_train_nationality_script_sets_modular_defaults(self):
@@ -196,15 +201,17 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("adversarial_enabled: false", source)
         self.assertIn("criterion: AMSoftmax", source)
         self.assertIn("dataset: null", source)
-        self.assertIn("active_split: all", source)
+        self.assertIn("active_split: train", source)
         self.assertIn("derive_num_spk: true", source)
         self.assertIn("init_lr: 0.001", source)
         self.assertIn("batch_size: 200", source)
-        self.assertIn("num_workers: 40", source)
-        self.assertIn("num_spk: 1211", source)
-        self.assertIn("trial_path: data/veri_test.txt", source)
-        self.assertIn("save_dir: ${PROJECT}/caarma-output/base-amsoftmax-vox1", source)
-        self.assertIn("title: caarma_base_amsoftmax_vox1", source)
+        self.assertIn("num_workers: 4", source)
+        self.assertIn("num_spk: 942", source)
+        self.assertIn("trial_path: null", source)
+        self.assertIn("save_dir: ${PROJECT}/caarma-output/base-amsoftmax-vox1-clean", source)
+        self.assertIn("title: caarma_base_amsoftmax_vox1_clean", source)
+        self.assertNotIn("active_split: all", source)
+        self.assertNotIn("data/veri_test.txt", source)
         self.assertNotIn("diffusion_fake_fraction", source)
         self.assertNotIn("lambda_syn", source)
         self.assertNotIn("voxceleb_full.csv", source)

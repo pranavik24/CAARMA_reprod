@@ -1,4 +1,4 @@
-# Base CAARMA config for the original clean training entrypoint (`train.py`).
+# Non-leaky base CAARMA config for the original clean training entrypoint (`train.py`).
 model: "MFA-CONFORMER" #"ECAPA" #"MFA-CONFORMER" #ECAPA, MFA-CONFORMER, RAWNET3, SKA_TDNN, ECAPA-LARGE etc. (Add)
 features: "FBank_New" #FBank, MFCC SpeechTokenizer, FBank_New, waveform, featNone
 augmentations: {
@@ -14,25 +14,25 @@ vox1_split_dir: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data"
 train_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_train.csv"
 val_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv"
 test_split_csv: "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv"
-active_split: "all"
+active_split: "train"
 USE_WANDB: True 
 criterion: 'AMSoftmax' #'AMSoftmaxGAN' #'Softmax' #'AMSoftmax'
 init_lr: 0.001
 epochs: 30 
 weight_decay: 0.0000001 
-trial_path: "./data/veri_test.txt"
+trial_path: null
 root: "./voxceleb1_test/wav/"
 warmup_step: 2000
 batch_size: 200
-num_workers: 40
+num_workers: 4
 second: 3
 do_augmentation: False
-num_spk: 1211
+num_spk: 942
 mixup: False
 embedding_dim: 192 
 checkpoint_path: "None" 
-save_dir: "caarma_mfa_vox1_ckpts"
-title: "caarma_mfa_vox1"
+save_dir: "caarma_mfa_vox1_clean_ckpts"
+title: "caarma_mfa_vox1_clean"
 
 
 # ECAPA-LARGE WAS USED

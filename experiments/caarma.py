@@ -37,6 +37,7 @@ from functions.voxceleb_split import (
     build_label_metadata_map,
     is_voxceleb_split_csv,
     load_validation_trials,
+    resolve_all_split_csv_paths,
     resolve_split_csv_path,
 )
 from helper.diffusion_mixup import diffusion_mixup
@@ -219,6 +220,15 @@ def build_label_gender_map(train_csv_path: str, meta_path: str) -> Dict[int, str
 
 def infer_num_speakers(config: Mapping[str, Any]) -> Optional[int]:
     dataset = config.get("dataset")
+    if _none_like(dataset) and str(config.get("active_split", "train")).strip().lower() == "all":
+        speaker_ids = []
+        for split_path in resolve_all_split_csv_paths(config):
+            if not split_path.exists():
+                return None
+            split_df = pd.read_csv(split_path, usecols=["VoxCeleb1_ID"])
+            speaker_ids.extend(split_df["VoxCeleb1_ID"].astype(str).str.strip().tolist())
+        return int(pd.Series(speaker_ids).nunique()) if speaker_ids else None
+
     split_path = Path(str(dataset)) if not _none_like(dataset) else resolve_split_csv_path(config)
     if not split_path.exists():
         return None

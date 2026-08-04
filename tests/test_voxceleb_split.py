@@ -10,6 +10,7 @@ from functions.voxceleb_split import (
     is_voxceleb_split_csv,
     load_training_dataframe,
     load_validation_trials,
+    resolve_all_split_csv_paths,
     resolve_split_csv_path,
 )
 
@@ -149,6 +150,76 @@ class VoxCelebSplitTests(unittest.TestCase):
         self.assertEqual(
             resolve_split_csv_path(config),
             self.split_dir / "vox1_val.csv",
+        )
+
+    def test_resolves_all_split_csv_paths_from_config(self):
+        config = {"vox1_split_dir": str(self.split_dir)}
+
+        self.assertEqual(
+            resolve_all_split_csv_paths(config),
+            [
+                self.split_dir / "vox1_train.csv",
+                self.split_dir / "vox1_val.csv",
+                self.split_dir / "vox1_test.csv",
+            ],
+        )
+
+    def test_load_training_dataframe_combines_all_voxceleb1_splits(self):
+        self.write_split(
+            "vox1_train.csv",
+            [
+                {
+                    "VoxCeleb1_ID": "id10002",
+                    "VGGFace1_ID": "person_b",
+                    "Gender": "m",
+                    "Nationality": "USA",
+                    "Set": "train",
+                }
+            ],
+        )
+        self.write_split(
+            "vox1_val.csv",
+            [
+                {
+                    "VoxCeleb1_ID": "id10001",
+                    "VGGFace1_ID": "person_a",
+                    "Gender": "f",
+                    "Nationality": "India",
+                    "Set": "val",
+                }
+            ],
+        )
+        self.write_split(
+            "vox1_test.csv",
+            [
+                {
+                    "VoxCeleb1_ID": "id10003",
+                    "VGGFace1_ID": "person_c",
+                    "Gender": "m",
+                    "Nationality": "UK",
+                    "Set": "test",
+                }
+            ],
+        )
+        self.touch_wav("id10002", "video_b/00001.wav")
+        self.touch_wav("id10001", "video_a/00001.wav")
+        self.touch_wav("id10003", "video_c/00001.wav")
+
+        df = load_training_dataframe(
+            {
+                "active_split": "all",
+                "vox1_split_dir": str(self.split_dir),
+                "vox1_wav_root": str(self.wav_root),
+            }
+        )
+
+        self.assertEqual(
+            df[["utt_spk_int_labels", "utt_spk_id", "split"]].to_dict("records"),
+            [
+                {"utt_spk_int_labels": 0, "utt_spk_id": "id10001", "split": "val"},
+                {"utt_spk_int_labels": 1, "utt_spk_id": "id10002", "split": "train"},
+                {"utt_spk_int_labels": 2, "utt_spk_id": "id10003", "split": "test"},
+            ],
         )
 
     def test_load_training_dataframe_preserves_existing_format(self):

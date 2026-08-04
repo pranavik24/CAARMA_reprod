@@ -14,6 +14,7 @@ SPLIT_COLUMNS = ("VoxCeleb1_ID", "VGGFace1_ID", "Gender", "Nationality", "Set")
 LEGACY_COLUMNS = ("utt_spk_int_labels", "utt_paths")
 SERVER_WAV_ROOT = "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav"
 SERVER_SPLIT_DIR = "/ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data"
+VOX1_SPLITS = ("train", "val", "test")
 
 
 def _resolve_path(value: object) -> Path:
@@ -51,6 +52,10 @@ def resolve_named_split_csv_path(config: Mapping[str, object], split_name: str) 
     return split_dir / f"vox1_{split}.csv"
 
 
+def resolve_all_split_csv_paths(config: Mapping[str, object]) -> list[Path]:
+    return [resolve_named_split_csv_path(config, split_name) for split_name in VOX1_SPLITS]
+
+
 def _normalize_speaker_id(value: object) -> str:
     speaker_id = str(value).strip()
     if not speaker_id:
@@ -68,17 +73,27 @@ def build_examples_from_split_csv(
 ) -> pd.DataFrame:
     """Expand a speaker-level split CSV into one dataloader row per WAV file."""
 
-    split_csv = _resolve_path(split_csv_path)
-    wav_root_path = _resolve_path(wav_root)
-    df = pd.read_csv(split_csv)
-    missing_columns = sorted(set(SPLIT_COLUMNS) - set(df.columns))
-    if missing_columns:
-        raise ValueError(f"{split_csv} is missing required columns: {', '.join(missing_columns)}")
+    return build_examples_from_split_csvs([split_csv_path], wav_root)
 
+
+def build_examples_from_split_csvs(
+    split_csv_paths: list[str | Path],
+    wav_root: str | Path,
+) -> pd.DataFrame:
+    """Expand one or more speaker-level VoxCeleb1 split CSVs into utterance rows."""
+
+    wav_root_path = _resolve_path(wav_root)
     speaker_rows = {}
-    for _, row in df.iterrows():
-        speaker_id = _normalize_speaker_id(row["VoxCeleb1_ID"])
-        speaker_rows.setdefault(speaker_id, row)
+    for split_csv_path in split_csv_paths:
+        split_csv = _resolve_path(split_csv_path)
+        df = pd.read_csv(split_csv)
+        missing_columns = sorted(set(SPLIT_COLUMNS) - set(df.columns))
+        if missing_columns:
+            raise ValueError(f"{split_csv} is missing required columns: {', '.join(missing_columns)}")
+
+        for _, row in df.iterrows():
+            speaker_id = _normalize_speaker_id(row["VoxCeleb1_ID"])
+            speaker_rows.setdefault(speaker_id, row)
 
     label_by_speaker = {
         speaker_id: index for index, speaker_id in enumerate(sorted(speaker_rows))
@@ -130,6 +145,10 @@ def load_training_dataframe(config_or_path: Mapping[str, object] | str | Path) -
     if isinstance(config_or_path, Mapping):
         config = config_or_path
         dataset = config.get("dataset")
+        if not dataset and str(config.get("active_split", "train")).strip().lower() == "all":
+            wav_root = config.get("vox1_wav_root", SERVER_WAV_ROOT)
+            return build_examples_from_split_csvs(resolve_all_split_csv_paths(config), str(wav_root))
+
         candidate_path = _resolve_path(dataset) if dataset else resolve_split_csv_path(config)
         if is_voxceleb_split_csv(candidate_path):
             wav_root = config.get("vox1_wav_root", SERVER_WAV_ROOT)

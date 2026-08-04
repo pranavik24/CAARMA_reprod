@@ -1,4 +1,4 @@
-# Original-baseline-style MFA-Conformer config for Bridges-2 using plain AMSoftmax.
+# VoxCeleb1-only MFA-Conformer config for Bridges-2 using plain AMSoftmax.
 experiment_type: base
 condition_attribute: none
 synthetic_strategy: none
@@ -10,14 +10,14 @@ augmentations:
   add_reverb: false
   drop_freq: false
   drop_chunk: false
-dataset: ${PROJECT}/caarma-data/voxceleb_full.csv
+dataset: null
 vox1_wav_root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
 vox1_split_dir: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data
 train_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_train.csv
 val_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_val.csv
 test_split_csv: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/data/vox1_test.csv
-active_split: train
-derive_num_spk: false
+active_split: all
+derive_num_spk: true
 USE_WANDB: true
 wandb_project: caarma-base
 criterion: AMSoftmax
@@ -39,13 +39,13 @@ val_num_workers: 10
 train_drop_last: false
 second: 3
 do_augmentation: false
-num_spk: 7323
+num_spk: 1211
 mixup: false
 save_top_k: 3
 validate_during_train: true
 embedding_dim: 192
 checkpoint_path: null
-save_dir: ${PROJECT}/caarma-output/base-amsoftmax-full
-title: caarma_base_amsoftmax_full
-score_output_prefix: caarma_base_amsoftmax_full
+save_dir: ${PROJECT}/caarma-output/base-amsoftmax-vox1
+title: caarma_base_amsoftmax_vox1
+score_output_prefix: caarma_base_amsoftmax_vox1
 devices: 1

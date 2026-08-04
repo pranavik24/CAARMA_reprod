@@ -91,6 +91,46 @@ class ExperimentConfigTests(unittest.TestCase):
         self.assertEqual(config["condition_attribute"], "none")
         self.assertFalse(config["adversarial_enabled"])
 
+    def test_derives_num_speakers_from_all_voxceleb1_splits(self):
+        for split_name, speaker_id in (
+            ("vox1_val.csv", "id10003"),
+            ("vox1_test.csv", "id10004"),
+        ):
+            with (self.split_dir / split_name).open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(
+                    handle,
+                    fieldnames=["VoxCeleb1_ID", "VGGFace1_ID", "Gender", "Nationality", "Set"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "VoxCeleb1_ID": speaker_id,
+                        "VGGFace1_ID": speaker_id,
+                        "Gender": "m",
+                        "Nationality": "USA",
+                        "Set": split_name.removeprefix("vox1_").removesuffix(".csv"),
+                    }
+                )
+
+        config = prepare_experiment_config(
+            {
+                "experiment_type": "base",
+                "condition_attribute": "none",
+                "synthetic_strategy": "none",
+                "active_split": "all",
+                "vox1_split_dir": str(self.split_dir),
+                "save_dir": str(self.root / "caarma-output" / "base-amsoftmax-vox1"),
+                "wandb_project": "caarma-base",
+                "title": "caarma_base_amsoftmax_vox1",
+                "score_output_prefix": "caarma_base_amsoftmax_vox1",
+            },
+            self.root / "configs" / "base_amsoftmax_vox1_bridges2.yaml",
+            self.args(),
+            default_experiment_type="base",
+        )
+
+        self.assertEqual(config["num_spk"], 4)
+
     def test_config_relative_paths_preserve_legacy_repo_root_resolution(self):
         repo_data = self.split_dir
         trial_path = repo_data / "veri_test.txt"

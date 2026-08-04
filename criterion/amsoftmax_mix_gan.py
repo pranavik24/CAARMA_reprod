@@ -54,7 +54,11 @@ class amsoftmax_gan(nn.Module):
     def forward(self, x, label=None, flagSyn=False):
         assert x.size()[0] == label.size()[0]
         assert x.size()[1] == self.in_feats
-        if self.synthetic_strategy == "diffusion":
+        if self.synthetic_strategy == "none":
+            synthetic_embeddings = x
+            y_combined = label
+            w_combined = self.W
+        elif self.synthetic_strategy == "diffusion":
             synthetic_embeddings, y_combined, w_combined = diffusion_mixup(
                 x,
                 self.W,
@@ -72,6 +76,8 @@ class amsoftmax_gan(nn.Module):
                 x, self.W, label
                 )
         if flagSyn:
+            if self.synthetic_strategy == "none":
+                return x.sum() * 0.0, torch.zeros((), device=x.device), synthetic_embeddings
             
             x_combined_0 = synthetic_embeddings.to(x.device) #torch.cat((x, synthetic_embeddings), dim=0)
             w_combined_0 = w_combined.to(x.device) #torch.cat((self.W.to(x.device), w_combined.to(x.device)), dim=1)

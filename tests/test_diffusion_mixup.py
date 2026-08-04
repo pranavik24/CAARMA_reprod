@@ -110,6 +110,24 @@ class DiffusionMixupTests(unittest.TestCase):
         self.assertEqual(criterion.diffusion_t_min, 1)
         self.assertEqual(criterion.diffusion_t_max, 20)
 
+    def test_build_plain_amsoftmax_criterion_has_zero_synthetic_loss(self):
+        criterion = build_criterion(
+            {
+                "criterion": "AMSoftmax",
+                "embedding_dim": 4,
+                "num_spk": 5,
+            }
+        )
+        embeddings = torch.randn(3, 4)
+        labels = torch.tensor([0, 2, 4])
+
+        loss, acc, synthetic_embeddings = criterion(embeddings, labels, flagSyn=True)
+
+        self.assertEqual(criterion.synthetic_strategy, "none")
+        self.assertEqual(float(loss.detach()), 0.0)
+        self.assertEqual(acc.numel(), 1)
+        self.assertEqual(tuple(synthetic_embeddings.shape), (3, 4))
+
 
 if __name__ == "__main__":
     unittest.main()

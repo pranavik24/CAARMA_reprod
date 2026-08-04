@@ -8,6 +8,7 @@ import torch
 
 from experiments.caarma import (
     AMSoftmaxGANExperiment,
+    build_experiment_criterion,
     compute_eer,
     compute_min_dcf,
     prepare_experiment_config,
@@ -141,6 +142,26 @@ class ExperimentConfigTests(unittest.TestCase):
 
 
 class ExperimentCriterionTests(unittest.TestCase):
+    def test_build_plain_amsoftmax_criterion_disables_synthetic_loss(self):
+        criterion = build_experiment_criterion(
+            {
+                "criterion": "AMSoftmax",
+                "num_spk": 3,
+                "embedding_dim": 4,
+                "synthetic_strategy": "none",
+                "condition_attribute": "none",
+            }
+        )
+        embeddings = torch.randn(2, 4)
+        labels = torch.tensor([0, 1])
+
+        loss, acc, synthetic_embeddings = criterion(embeddings, labels, flagSyn=True)
+
+        self.assertEqual(criterion.synthetic_strategy, "none")
+        self.assertEqual(float(loss.detach()), 0.0)
+        self.assertEqual(tuple(acc.shape), ())
+        self.assertEqual(tuple(synthetic_embeddings.shape), (2, 4))
+
     def test_none_strategy_has_zero_synthetic_loss(self):
         criterion = AMSoftmaxGANExperiment(
             embedding_dim=4,

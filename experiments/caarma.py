@@ -48,6 +48,7 @@ SPEAKER_ID_RE = re.compile(r"id\d{5}")
 EXPERIMENT_TYPES = {"base", "gender", "nationality"}
 SYNTHETIC_STRATEGIES = {"none", "avg", "diffusion"}
 CONDITION_ATTRIBUTES = {"none", "gender", "nationality"}
+CRITERIA = {"AMSoftmax", "AMSoftmaxGAN"}
 PATH_KEYS = (
     "dataset",
     "trial_path",
@@ -273,6 +274,13 @@ def _validate_experiment_config(config: Mapping[str, Any]) -> None:
         raise ValueError(f"condition_attribute must be one of {sorted(CONDITION_ATTRIBUTES)}")
     if synthetic_strategy not in SYNTHETIC_STRATEGIES:
         raise ValueError(f"synthetic_strategy must be one of {sorted(SYNTHETIC_STRATEGIES)}")
+    criterion = str(config.get("criterion", "AMSoftmaxGAN")).strip()
+    if criterion not in CRITERIA:
+        raise ValueError(f"criterion must be one of {sorted(CRITERIA)}")
+    if criterion == "AMSoftmax" and synthetic_strategy != "none":
+        raise ValueError("AMSoftmax criterion must use synthetic_strategy: none")
+    if criterion == "AMSoftmax" and _as_bool(config.get("adversarial_enabled", False)):
+        raise ValueError("AMSoftmax criterion must use adversarial_enabled: false")
     if experiment_type == "base" and condition_attribute != "none":
         raise ValueError("base experiment_type must use condition_attribute: none")
     if experiment_type in {"gender", "nationality"} and condition_attribute != experiment_type:
@@ -738,10 +746,17 @@ def _build_label_condition_map(config: Dict[str, Any]) -> Dict[int, str]:
 
 
 def build_experiment_criterion(config: Dict[str, Any]) -> nn.Module:
-    if config["criterion"] != "AMSoftmaxGAN":
-        raise NotImplementedError("The shared CAARMA experiment runner supports AMSoftmaxGAN only.")
+    criterion = str(config["criterion"]).strip()
+    if criterion not in CRITERIA:
+        raise NotImplementedError(
+            f"The shared CAARMA experiment runner supports {sorted(CRITERIA)} only."
+        )
 
-    synthetic_strategy = str(config.get("synthetic_strategy", "avg")).strip().lower()
+    synthetic_strategy = (
+        "none"
+        if criterion == "AMSoftmax"
+        else str(config.get("synthetic_strategy", "avg")).strip().lower()
+    )
     condition_attribute = str(config.get("condition_attribute", "none")).strip().lower()
     active_condition_attribute = condition_attribute if synthetic_strategy == "avg" else "none"
     condition_config = dict(config)

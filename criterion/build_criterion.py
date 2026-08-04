@@ -1,13 +1,18 @@
 from criterion.amsoftmax_mix_gan import amsoftmax_gan
 
 def build_criterion(config):
-    if config['criterion'] == 'AMSoftmaxGAN':
+    criterion_name = str(config['criterion']).strip()
+    if criterion_name in {'AMSoftmax', 'AMSoftmaxGAN'}:
         criterion = amsoftmax_gan(
             embedding_dim=int(config.get('embedding_dim', 192)),
             num_classes=int(config.get('num_spk', 1211)),
             margin=float(config.get('margin', 0.2)),
             scale=float(config.get('scale', 30)),
-            synthetic_strategy=config.get("synthetic_strategy", "avg"),
+            synthetic_strategy=(
+                "none"
+                if criterion_name == "AMSoftmax"
+                else config.get("synthetic_strategy", "avg")
+            ),
             diffusion_timesteps=int(config.get("diffusion_timesteps", 100)),
             diffusion_t_min=int(config.get("diffusion_t_min", 1)),
             diffusion_t_max=int(config.get("diffusion_t_max", 20)),

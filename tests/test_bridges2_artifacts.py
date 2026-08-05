@@ -18,6 +18,7 @@ class Bridges2ArtifactTests(unittest.TestCase):
                     "base.yaml",
                     "base_amsoftmax_vox1_bridges2.yaml",
                     "base_diffusion_1to1_bridges2.yaml",
+                    "base_diffusion_2to1_clean_bridges2.yaml",
                 }
                 if config_path.name in generated_validation_configs:
                     self.assertIn("trial_path: null", source)
@@ -263,6 +264,27 @@ class Bridges2ArtifactTests(unittest.TestCase):
         self.assertIn("num_spk: 942", source)
         self.assertIn("save_dir: ${PROJECT}/caarma-output/base-diffusion-1to1-clean", source)
         self.assertIn("title: caarma_base_diffusion_1to1_clean", source)
+        self.assertNotIn("data/veri_test.txt", source)
+        self.assertNotIn("caarma-gender", source)
+
+    def test_base_diffusion_2to1_clean_config_sets_half_fake_fraction(self):
+        source = (ROOT / "configs" / "base_diffusion_2to1_clean_bridges2.yaml").read_text()
+
+        self.assertIn("2:1 real-to-fake embedding ratio", source)
+        self.assertIn("experiment_type: base", source)
+        self.assertIn("condition_attribute: none", source)
+        self.assertIn("synthetic_strategy: diffusion", source)
+        self.assertIn("adversarial_enabled: false", source)
+        self.assertIn("criterion: AMSoftmaxGAN", source)
+        self.assertIn("active_split: train", source)
+        self.assertIn("trial_path: null", source)
+        self.assertIn("validation_split: val", source)
+        self.assertIn("diffusion_fake_fraction: 0.5", source)
+        self.assertIn("lambda_syn: 0.01", source)
+        self.assertIn("num_workers: 4", source)
+        self.assertIn("num_spk: 942", source)
+        self.assertIn("save_dir: ${PROJECT}/caarma-output/base-diffusion-2to1-clean", source)
+        self.assertIn("title: caarma_base_diffusion_2to1_clean", source)
         self.assertNotIn("data/veri_test.txt", source)
         self.assertNotIn("caarma-gender", source)
 

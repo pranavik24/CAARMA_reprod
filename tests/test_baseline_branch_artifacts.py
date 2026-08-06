@@ -21,9 +21,14 @@ class BaselineBranchArtifactTests(unittest.TestCase):
         self.assertIn("embedding_dim: 192", source)
         self.assertIn("active_split: train", source)
         self.assertIn("num_spk: 942", source)
-        self.assertIn("trial_path: null", source)
-        self.assertIn("validation_split: val", source)
-        self.assertIn("save_dir: ${PROJECT}/caarma-output/baseline-mfa-conformer-clean", source)
+        self.assertIn("trial_path: ../data/veri_test.txt", source)
+        self.assertIn("generate_validation_trials: false", source)
+        self.assertIn("validation_split: test", source)
+        self.assertIn(
+            "save_dir: ${PROJECT}/caarma-output/baseline-mfa-conformer-veritest-selected",
+            source,
+        )
+        self.assertIn("title: caarma_baseline_mfa_conformer_veritest_selected", source)
         self.assertNotIn("voxceleb_full.csv", source)
         self.assertNotIn("AMSoftmaxGAN", source)
 

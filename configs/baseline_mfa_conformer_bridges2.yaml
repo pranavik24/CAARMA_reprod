@@ -1,4 +1,4 @@
-# Clean MFA-Conformer baseline for Bridges-2.
+# MFA-Conformer baseline for Bridges-2, checkpoint-selected on official veri_test.
 # Architecture: 6 Conformer blocks, 256-dim encoder, 4 heads, conv kernel 15, 192-dim embeddings.
 model: MFA-CONFORMER
 features: Fbank
@@ -21,15 +21,15 @@ derive_num_spk: true
 num_spk: 942
 USE_WANDB: true
 wandb_project: caarma-baseline
-title: caarma_baseline_mfa_conformer_clean
-score_output_prefix: caarma_baseline_mfa_conformer_clean
+title: caarma_baseline_mfa_conformer_veritest_selected
+score_output_prefix: caarma_baseline_mfa_conformer_veritest_selected
 init_lr: 0.001
 epochs: 30
 weight_decay: 0.0000001
-trial_path: null
+trial_path: ../data/veri_test.txt
 root: /ocean/projects/cis220031p/shared/raw/data/VoxCeleb1/wav
-generate_validation_trials: true
-validation_split: val
+generate_validation_trials: false
+validation_split: test
 validation_trial_protocol: generated_cross_session
 validation_max_speakers: 1000
 validation_pos_pairs_per_speaker: 1
@@ -44,5 +44,5 @@ do_augmentation: false
 save_top_k: 3
 validate_during_train: true
 checkpoint_path: null
-save_dir: ${PROJECT}/caarma-output/baseline-mfa-conformer-clean
+save_dir: ${PROJECT}/caarma-output/baseline-mfa-conformer-veritest-selected
 devices: 1
